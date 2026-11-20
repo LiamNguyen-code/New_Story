@@ -1,0 +1,24 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import { SITE } from '../site.config';
+---
+
+<PageLayout title={`About Us | ${SITE.name}`} heading="About us" description={`${SITE.name} publishes original serial fiction you can read free, one chapter at a time.`}>
+  <p>
+    <strong>{SITE.name}</strong> is a home for original serial fiction — stories about love, loyalty, betrayal and second chances,
+    published one chapter at a time so you can read during a coffee break or binge an entire story in one evening.
+  </p>
+  <h2>What we publish</h2>
+  <p>
+    Mafia romance, billionaire drama, family secrets, revenge and heartwarming animal stories. Every story is a work of fiction
+    written and edited by our team. Names, characters and events are products of imagination.
+  </p>
+  <h2>Our editorial standards</h2>
+  <ul>
+    <li>Every story is reviewed and edited before publication.</li>
+    <li>We never publish stories copied from other authors or websites.</li>
+    <li>Content is suitable for adult readers (13+) and avoids explicit material.</li>
+  </ul>
+  <h2>Get in touch</h2>
+  <p>Have feedback, a story idea, or found a typo? <a href="/contact/">Contact us</a> — we read every message.</p>
+</PageLayout>

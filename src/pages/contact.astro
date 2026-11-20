@@ -1,0 +1,54 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import { SITE } from '../site.config';
+---
+
+<PageLayout title={`Contact Us | ${SITE.name}`} heading="Contact us" description={`Get in touch with the ${SITE.name} team.`}>
+  <p>Questions, feedback or copyright concerns? Send us a message and we will reply within 2–3 business days.</p>
+
+  {
+    !SITE.web3formsKey && (
+      <p class="rounded-lg bg-amber-100 p-3 text-sm text-amber-900">
+        ⚠️ Contact form is not configured. Get a free access key at web3forms.com and set <code>web3formsKey</code> in
+        <code>src/data/settings.json</code>.
+      </p>
+    )
+  }
+
+  <form action="https://api.web3forms.com/submit" method="POST" class="not-prose mt-6 space-y-4" data-contact-form>
+    <input type="hidden" name="access_key" value={SITE.web3formsKey} />
+    <input type="hidden" name="subject" value={`New message from ${SITE.name}`} />
+    <input type="checkbox" name="botcheck" class="hidden" style="display:none" tabindex="-1" autocomplete="off" />
+    <label class="block">
+      <span class="text-sm font-medium">Name</span>
+      <input name="name" required class="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2" />
+    </label>
+    <label class="block">
+      <span class="text-sm font-medium">Email</span>
+      <input name="email" type="email" required class="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2" />
+    </label>
+    <label class="block">
+      <span class="text-sm font-medium">Message</span>
+      <textarea name="message" rows="6" required class="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2"></textarea>
+    </label>
+    <button type="submit" class="rounded-full bg-accent px-6 py-2 font-semibold text-white hover:opacity-90">Send message</button>
+    <p data-status class="text-sm" role="status"></p>
+  </form>
+</PageLayout>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-contact-form]');
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const status = form.querySelector('[data-status]')!;
+    status.textContent = 'Sending…';
+    try {
+      const res = await fetch(form.action, { method: 'POST', body: new FormData(form), headers: { Accept: 'application/json' } });
+      const json = await res.json();
+      status.textContent = json.success ? 'Thank you! Your message has been sent.' : 'Something went wrong: ' + json.message;
+      if (json.success) form.reset();
+    } catch {
+      status.textContent = 'Network error. Please try again.';
+    }
+  });
+</script>

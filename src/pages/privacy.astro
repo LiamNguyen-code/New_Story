@@ -1,0 +1,48 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import { SITE } from '../site.config';
+const updated = 'November 19, 2026';
+---
+
+<PageLayout title={`Privacy Policy | ${SITE.name}`} heading="Privacy Policy" description={`How ${SITE.name} collects, uses and protects your information.`}>
+  <p><em>Last updated: {updated}</em></p>
+  <p>This Privacy Policy explains how {SITE.name} ("we", "us") handles information when you visit {SITE.url}.</p>
+
+  <h2>Information we collect</h2>
+  <ul>
+    <li><strong>Usage data:</strong> pages visited, time on page, device and browser type, collected via Google Analytics.</li>
+    <li><strong>Contact data:</strong> name and email you provide when using our contact form.</li>
+    <li>
+      <strong>Local storage:</strong> your reading progress, theme and font preferences are stored only in your browser and are never sent
+      to us.
+    </li>
+  </ul>
+
+  <h2>Cookies and advertising</h2>
+  <p>
+    We use Google AdSense to display ads. Third-party vendors, including Google, use cookies to serve ads based on your prior visits to
+    this and other websites. Google's use of advertising cookies enables it and its partners to serve ads based on your visits to our site
+    and/or other sites on the Internet.
+  </p>
+  <p>
+    You may opt out of personalized advertising by visiting <a href="https://www.google.com/settings/ads" rel="nofollow noopener"
+      >Google Ads Settings</a
+    > or <a href="https://www.aboutads.info" rel="nofollow noopener">www.aboutads.info</a>. Learn more about
+    <a href="https://policies.google.com/technologies/partner-sites" rel="nofollow noopener">how Google uses data</a>.
+  </p>
+  <p>
+    Visitors in the EEA, UK and Switzerland are shown a consent message and may choose whether to allow personalized advertising.
+  </p>
+
+  <h2>Your rights</h2>
+  <p>
+    Depending on your location (e.g. GDPR, CCPA), you may have the right to access, correct or delete personal data we hold about you.
+    Contact us through our <a href="/contact/">contact page</a>.
+  </p>
+
+  <h2>Children's privacy</h2>
+  <p>Our site is not directed at children under 13 and we do not knowingly collect their personal information.</p>
+
+  <h2>Changes</h2>
+  <p>We may update this policy from time to time. Changes are posted on this page with a new "last updated" date.</p>
+</PageLayout>

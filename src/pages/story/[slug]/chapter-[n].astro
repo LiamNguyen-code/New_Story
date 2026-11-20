@@ -1,0 +1,240 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { Image } from 'astro:assets';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../../components/Breadcrumbs.astro';
+import CrumbBar from '../../../components/CrumbBar.astro';
+import ShareButtons from '../../../components/ShareButtons.astro';
+import StoryCard from '../../../components/StoryCard.astro';
+import AdSlot from '../../../components/AdSlot.astro';
+import ChapterToc from '../../../components/ChapterToc.astro';
+import RelatedChapters from '../../../components/RelatedChapters.astro';
+import OtherPosts from '../../../components/OtherPosts.astro';
+import { SITE } from '../../../site.config';
+import {
+  chapterUrl,
+  excerpt,
+  genreName,
+  genreUrl,
+  getChaptersByStory,
+  getStories,
+  storyUrl,
+  type Chapter,
+  type Story,
+} from '../../../lib/content';
+import { ogImage } from '../../../lib/og';
+
+export const getStaticPaths = (async () => {
+  const stories = await getStories();
+  const byStory = await getChaptersByStory();
+  return stories.flatMap((story) => {
+    const chapters = byStory.get(story.id) ?? [];
+    return chapters.map((chapter, i) => ({
+      params: { slug: story.id, n: String(chapter.data.number) },
+      props: { story, chapter, chapters, index: i, stories },
+    }));
+  });
+}) satisfies GetStaticPaths;
+
+const { story, chapter, chapters, index, stories } = Astro.props as {
+  story: Story;
+  chapter: Chapter;
+  chapters: Chapter[];
+  index: number;
+  stories: Story[];
+};
+const n = chapter.data.number;
+const total = chapters.length;
+const prev = chapters[index - 1];
+const next = chapters[index + 1];
+const prevUrl = prev && chapterUrl(story.id, prev.data.number);
+const nextUrl = next && chapterUrl(story.id, next.data.number);
+
+// Tách nội dung: [phần 1] Ad [phần 2] "May you like" [2 đoạn cuối]
+const paras = (chapter.rendered?.html ?? '').split('</p>').filter((p) => p.trim());
+const join = (list: string[]) => list.map((p) => p + '</p>').join('');
+const adAt = SITE.inContentAdAfterParagraph;
+const likeAt = Math.max(adAt + 3, paras.length - 2);
+const hasAd = paras.length > adAt + 3;
+const hasLike = paras.length > adAt + 5;
+const part1 = hasAd ? join(paras.slice(0, adAt)) : join(paras);
+const part2 = hasAd ? join(paras.slice(adAt, hasLike ? likeAt : undefined)) : '';
+const part3 = hasLike ? join(paras.slice(likeAt)) : '';
+
+const others = stories.filter((s) => s.id !== story.id);
+const sameGenre = others.filter((s) => s.data.genres.some((g) => story.data.genres.includes(g)));
+const mayLike = [...sameGenre, ...others.filter((s) => !sameGenre.includes(s))].slice(0, 3);
+const otherPosts = others.slice(0, 8);
+// "Related Stories" = 6 chương kế tiếp (vòng lại từ đầu nếu hết)
+const related = [...chapters.slice(index + 1), ...chapters.slice(0, index)].slice(0, 6);
+
+const heading = `Chapter ${n} - ${chapter.data.title}`;
+const baseTitle = `${story.data.seoTitle ?? story.data.title} – Chapter ${n}`;
+const seoTitle = baseTitle.length + SITE.name.length + 3 <= 65 ? `${baseTitle} | ${SITE.name}` : baseTitle;
+const description = chapter.data.seoDescription ?? excerpt(chapter.body ?? '');
+const url = new URL(chapterUrl(story.id, n), SITE.url).href;
+const og = await ogImage(story.data.cover);
+
+const chapterLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Chapter',
+  name: heading,
+  headline: `${story.data.title} – ${heading}`.slice(0, 110),
+  url,
+  position: n,
+  description,
+  image: new URL(og, SITE.url).href,
+  inLanguage: SITE.lang,
+  datePublished: story.data.publishDate.toISOString(),
+  dateModified: (story.data.updatedDate ?? story.data.publishDate).toISOString(),
+  wordCount: (chapter.body ?? '').split(/\s+/).length,
+  isAccessibleForFree: true,
+  isPartOf: {
+    '@type': 'Book',
+    '@id': new URL(storyUrl(story.id), SITE.url).href,
+    name: story.data.title,
+    url: new URL(storyUrl(story.id), SITE.url).href,
+  },
+  publisher: { '@type': 'Organization', name: SITE.name, url: SITE.url },
+};
+---
+
+<BaseLayout
+  title={seoTitle}
+  description={description}
+  image={og}
+  imageAlt={story.data.title}
+  type="article"
+  publishedTime={story.data.publishDate}
+  modifiedTime={story.data.updatedDate}
+  prev={prevUrl}
+  next={nextUrl}
+  jsonLd={chapterLd}
+>
+  <Breadcrumbs
+    jsonOnly
+    items={[
+      { name: genreName(story.data.genres[0]), href: genreUrl(story.data.genres[0]) },
+      { name: story.data.title, href: storyUrl(story.id) },
+      { name: `Chapter ${n}` },
+    ]}
+  />
+
+  <div class="mx-auto max-w-[1180px] px-4 sm:px-6 xl:grid xl:grid-cols-[minmax(0,760px)_300px] xl:justify-center xl:gap-10">
+    <div class="min-w-0">
+      <CrumbBar title={story.data.title} href={storyUrl(story.id)} label={`Chapter ${n} / ${total}`} />
+
+      <h1 class="mt-6 text-[28px] font-bold leading-[1.15] tracking-tight text-slate-900 sm:text-[42px] xl:text-[54px]">{heading}</h1>
+
+      <Image
+        src={story.data.cover}
+        alt={story.data.coverAlt ?? story.data.title}
+        widths={[480, 760, 1200]}
+        sizes="(min-width: 1280px) 760px, 100vw"
+        loading="eager"
+        fetchpriority="high"
+        class="mt-8 aspect-[1200/630] w-full rounded-2xl object-cover"
+      />
+
+      <AdSlot pos="top" />
+
+      <article class="reader mt-8" data-reader>
+        <Fragment set:html={part1} />
+        {hasAd && <AdSlot pos="inContent" />}
+        {part2 && <Fragment set:html={part2} />}
+        {
+          hasLike && mayLike.length > 0 && (
+            <aside class="my-10 border-t border-zinc-100 pt-6" aria-labelledby="maylike-heading">
+              <h2 id="maylike-heading" class="mb-3 text-base font-bold text-slate-900">
+                May you like
+              </h2>
+              <div class="grid grid-cols-2 gap-3">
+                {mayLike.map((s) => (
+                  <StoryCard story={s} variant="mini" />
+                ))}
+              </div>
+            </aside>
+          )
+        }
+        {part3 && <Fragment set:html={part3} />}
+      </article>
+      <div data-chapter-end aria-hidden="true"></div>
+
+      <div class="mt-8"><ShareButtons title={`${story.data.title} – ${heading}`} /></div>
+
+      <nav aria-label="Chapter navigation" class="mt-8 grid grid-cols-2 gap-3 border-t border-zinc-200 pt-6">
+        <a
+          href={prevUrl ?? storyUrl(story.id)}
+          rel={prevUrl ? 'prev' : undefined}
+          class="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-center hover:shadow-sm"
+        >
+          <span class="block text-[9px] uppercase tracking-[0.12em] text-zinc-400">{prevUrl ? '← Previous chapter' : 'View intro'}</span>
+          <span class="mt-1 line-clamp-2 text-[11.5px] font-medium leading-snug text-slate-900">
+            {prev ? `Chapter ${prev.data.number} - ${prev.data.title}` : story.data.title}
+          </span>
+        </a>
+        {
+          nextUrl ? (
+            <a href={nextUrl} rel="next" data-next class="rounded-xl border border-accent bg-accent px-4 py-3 text-center text-white hover:opacity-90">
+              <span class="block text-[9px] uppercase tracking-[0.12em] text-blue-100">Next chapter →</span>
+              <span class="mt-1 line-clamp-2 text-[11.5px] font-medium leading-snug">
+                Chapter {next!.data.number} - {next!.data.title}
+              </span>
+            </a>
+          ) : (
+            <a href={storyUrl(story.id)} class="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-center hover:shadow-sm">
+              <span class="block text-[9px] uppercase tracking-[0.12em] text-zinc-400">The end</span>
+              <span class="mt-1 line-clamp-2 text-[11.5px] font-medium leading-snug text-slate-900">Back to story intro</span>
+            </a>
+          )
+        }
+      </nav>
+
+      <AdSlot pos="bottom" />
+
+      <RelatedChapters slug={story.id} cover={story.data.cover} chapters={related} />
+    </div>
+
+    <div>
+      <ChapterToc slug={story.id} storyTitle={story.data.title} chapters={chapters} current={n} />
+    </div>
+  </div>
+
+  <OtherPosts stories={otherPosts} />
+</BaseLayout>
+
+<script
+  is:inline
+  define:vars={{
+    entry: { slug: story.id, title: story.data.title, chapter: n, total, url: chapterUrl(story.id, n) },
+    nextUrl: nextUrl ?? null,
+    prevUrl: prevUrl ?? null,
+  }}
+>
+  // Lưu lịch sử đọc (tối đa 10 truyện) cho mục "Continue reading"
+  try {
+    const key = 'reading-history';
+    const list = JSON.parse(localStorage.getItem(key) || '[]').filter((h) => h.slug !== entry.slug);
+    list.unshift({ ...entry, at: Date.now() });
+    localStorage.setItem(key, JSON.stringify(list.slice(0, 10)));
+  } catch (e) {}
+
+  // Phím ← → để chuyển chương
+  document.addEventListener('keydown', (e) => {
+    if (e.target.closest && e.target.closest('input,select,textarea')) return;
+    if (e.key === 'ArrowRight' && nextUrl) location.href = nextUrl;
+    if (e.key === 'ArrowLeft' && prevUrl) location.href = prevUrl;
+  });
+
+  // Sự kiện GA: đọc hết chương / bấm chương sau
+  const io = new IntersectionObserver((es) => {
+    if (es[0].isIntersecting) {
+      window.gtag?.('event', 'chapter_complete', { story: entry.slug, chapter: entry.chapter });
+      io.disconnect();
+    }
+  });
+  io.observe(document.querySelector('[data-chapter-end]'));
+  document.querySelector('[data-next]')?.addEventListener('click', () =>
+    window.gtag?.('event', 'next_chapter', { story: entry.slug, chapter: entry.chapter }),
+  );
+</script>

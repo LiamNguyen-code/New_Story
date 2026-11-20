@@ -1,0 +1,29 @@
+---
+interface Props {
+  prev?: string;
+  next?: string;
+}
+const { prev, next } = Astro.props;
+const btn = 'rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-700';
+---
+
+{
+  (prev || next) && (
+    <nav aria-label="Pagination" class="mt-8 flex items-center justify-between">
+      {prev ? (
+        <a href={prev} rel="prev" class={`${btn} hover:bg-zinc-50`}>
+          Previous
+        </a>
+      ) : (
+        <span class={`${btn} text-zinc-400`}>Previous</span>
+      )}
+      {next ? (
+        <a href={next} rel="next" class={`${btn} hover:bg-zinc-50`}>
+          Next
+        </a>
+      ) : (
+        <span class={`${btn} text-zinc-400`}>Next</span>
+      )}
+    </nav>
+  )
+}

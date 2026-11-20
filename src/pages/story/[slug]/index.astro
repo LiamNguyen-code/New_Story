@@ -1,0 +1,173 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { Image } from 'astro:assets';
+import { getEntry, render } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../../components/Breadcrumbs.astro';
+import CrumbBar from '../../../components/CrumbBar.astro';
+import ShareButtons from '../../../components/ShareButtons.astro';
+import AdSlot from '../../../components/AdSlot.astro';
+import ChapterToc from '../../../components/ChapterToc.astro';
+import RelatedChapters from '../../../components/RelatedChapters.astro';
+import OtherPosts from '../../../components/OtherPosts.astro';
+import { SITE } from '../../../site.config';
+import {
+  chapterUrl,
+  excerpt,
+  formatDate,
+  genreName,
+  genreUrl,
+  getChaptersByStory,
+  getStories,
+  readingMinutes,
+  storyUrl,
+  tagUrl,
+  type Story,
+} from '../../../lib/content';
+import { ogImage } from '../../../lib/og';
+
+export const getStaticPaths = (async () => {
+  const stories = await getStories();
+  return stories.map((story) => ({ params: { slug: story.id }, props: { story, all: stories } }));
+}) satisfies GetStaticPaths;
+
+const { story, all } = Astro.props as { story: Story; all: Story[] };
+const { data } = story;
+const chapters = (await getChaptersByStory()).get(story.id) ?? [];
+const author = await getEntry(data.author);
+const { Content } = await render(story);
+const totalMinutes = chapters.reduce((sum, c) => sum + readingMinutes(c.body), 0);
+const otherPosts = all.filter((s) => s.id !== story.id).slice(0, 8);
+
+const url = new URL(storyUrl(story.id), SITE.url).href;
+const og = await ogImage(data.cover);
+const title = data.seoTitle ?? (data.title.length + SITE.name.length + 3 <= 65 ? `${data.title} | ${SITE.name}` : data.title);
+const description = data.seoDescription ?? data.description ?? excerpt(story.body ?? '');
+
+const bookLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Book',
+  '@id': url,
+  name: data.title,
+  url,
+  description,
+  image: new URL(og, SITE.url).href,
+  genre: data.genres.map(genreName),
+  keywords: data.tags.join(', '),
+  inLanguage: SITE.lang,
+  datePublished: data.publishDate.toISOString(),
+  dateModified: (data.updatedDate ?? data.publishDate).toISOString(),
+  author: { '@type': 'Person', name: author?.data.name ?? SITE.name },
+  publisher: { '@type': 'Organization', name: SITE.name, url: SITE.url },
+  numberOfPages: chapters.length,
+  bookFormat: 'https://schema.org/EBook',
+  isAccessibleForFree: true,
+  hasPart: chapters.map((c) => ({
+    '@type': 'Chapter',
+    name: `Chapter ${c.data.number} - ${c.data.title}`,
+    position: c.data.number,
+    url: new URL(chapterUrl(story.id, c.data.number), SITE.url).href,
+  })),
+};
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  image={og}
+  imageAlt={data.coverAlt ?? data.title}
+  type="book"
+  publishedTime={data.publishDate}
+  modifiedTime={data.updatedDate}
+  next={chapters[0] && chapterUrl(story.id, chapters[0].data.number)}
+  jsonLd={bookLd}
+>
+  <Breadcrumbs jsonOnly items={[{ name: genreName(data.genres[0]), href: genreUrl(data.genres[0]) }, { name: data.title }]} />
+
+  <div class="mx-auto max-w-[1180px] px-4 sm:px-6 xl:grid xl:grid-cols-[minmax(0,760px)_300px] xl:justify-center xl:gap-10">
+    <div class="min-w-0">
+      <CrumbBar title={genreName(data.genres[0])} href={genreUrl(data.genres[0])} label={`${chapters.length} chapters`} />
+
+      <article data-pagefind-body>
+        <h1 class="mt-6 text-[28px] font-bold leading-[1.15] tracking-tight text-slate-900 sm:text-[42px] xl:text-[50px]">{data.title}</h1>
+        <p class="mt-4 flex flex-wrap gap-x-3 text-[13px] text-zinc-500" data-pagefind-ignore>
+          {author && <span>By <strong class="font-semibold text-zinc-700">{author.data.name}</strong></span>}
+          <time datetime={data.publishDate.toISOString()}>{formatDate(data.publishDate)}</time>
+          <span>· ~{totalMinutes} min read</span>
+          <span>· {data.status === 'completed' ? 'Completed' : 'Ongoing'}</span>
+        </p>
+
+        <Image
+          src={data.cover}
+          alt={data.coverAlt ?? data.title}
+          widths={[480, 760, 1200]}
+          sizes="(min-width: 1280px) 760px, 100vw"
+          loading="eager"
+          fetchpriority="high"
+          class="mt-8 aspect-[1200/630] w-full rounded-2xl object-cover"
+        />
+
+        <div class="reader mt-8">
+          <Content />
+        </div>
+      </article>
+
+      <div class="mt-2 flex flex-wrap gap-2">
+        {
+          data.genres.map((g) => (
+            <a href={genreUrl(g)} class="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-accent hover:bg-blue-100">
+              {genreName(g)}
+            </a>
+          ))
+        }
+        {
+          data.tags.map((t) => (
+            <a href={tagUrl(t)} class="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs text-zinc-600 hover:text-accent">
+              #{t}
+            </a>
+          ))
+        }
+      </div>
+
+      {
+        chapters.length > 0 && (
+          <div class="mt-8 flex flex-wrap gap-3">
+            <a href={chapterUrl(story.id, chapters[0].data.number)} class="rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-white hover:opacity-90">
+              Start reading · Chapter 1
+            </a>
+            <a href="#" data-resume data-slug={story.id} class="hidden rounded-xl border border-accent bg-white px-6 py-3 text-sm font-semibold text-accent">
+              Continue
+            </a>
+          </div>
+        )
+      }
+
+      <AdSlot pos="top" />
+
+      <div class="mt-8"><ShareButtons title={data.title} /></div>
+
+      <RelatedChapters slug={story.id} cover={data.cover} chapters={chapters.slice(0, 6)} />
+    </div>
+
+    <div>
+      <ChapterToc slug={story.id} storyTitle={data.title} chapters={chapters} current={0} />
+    </div>
+  </div>
+
+  <OtherPosts stories={otherPosts} />
+</BaseLayout>
+
+<script>
+  const btn = document.querySelector<HTMLAnchorElement>('[data-resume]');
+  if (btn) {
+    try {
+      const history = JSON.parse(localStorage.getItem('reading-history') || '[]');
+      const entry = history.find((h: { slug: string }) => h.slug === btn.dataset.slug);
+      if (entry && entry.chapter > 1) {
+        btn.href = entry.url;
+        btn.textContent = `Continue · Chapter ${entry.chapter}`;
+        btn.classList.remove('hidden');
+      }
+    } catch {}
+  }
+</script>

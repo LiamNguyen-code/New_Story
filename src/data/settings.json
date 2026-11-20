@@ -1,0 +1,26 @@
+{
+  "name": "Midnight Tales",
+  "tagline": "Gripping serial stories, one chapter at a time",
+  "description": "Read gripping original serial stories — mafia romance, billionaire drama, family secrets and revenge — free, chapter by chapter.",
+  "url": "http://localhost:4321",
+  "locale": "en_US",
+  "lang": "en",
+  "twitter": "",
+  "gaId": "",
+  "adsenseClient": "",
+  "adSlots": {
+    "top": "",
+    "inContent": "",
+    "bottom": "",
+    "sidebar": ""
+  },
+  "inContentAdAfterParagraph": 4,
+  "web3formsKey": "",
+  "genres": [
+    { "id": "mafia", "name": "Mafia Romance", "description": "Dangerous men, loyal hearts and families bound by secrets. Mafia romance stories full of power, betrayal and love." },
+    { "id": "billionaire", "name": "Billionaire", "description": "Wealth can buy almost anything — except the truth. Billionaire drama stories about money, power and second chances." },
+    { "id": "family", "name": "Family Drama", "description": "Buried secrets, broken bonds and the people who finally speak up. Emotional family drama stories." },
+    { "id": "revenge", "name": "Revenge", "description": "Quiet people who were underestimated for far too long. Satisfying revenge and justice stories." },
+    { "id": "animals", "name": "Animals & Heart", "description": "Loyal dogs, stray cats and the humans they save. Heartwarming stories about animals." }
+  ]
+}

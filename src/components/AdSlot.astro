@@ -1,0 +1,72 @@
+---
+// Vị trí quảng cáo AdSense. Script AdSense chỉ được tải khi một ô quảng cáo
+// sắp cuộn vào màn hình, nên không làm chậm phần nội dung chính.
+import { SITE } from '../site.config';
+
+interface Props {
+  pos: 'top' | 'inContent' | 'bottom' | 'sidebar';
+}
+const { pos } = Astro.props;
+const slot = SITE.adSlots[pos];
+const enabled = Boolean(SITE.adsenseClient && slot);
+const showPlaceholder = !enabled && import.meta.env.DEV;
+---
+
+{
+  enabled && (
+    <div class="ad-slot" data-pos={pos} aria-label="Advertisement">
+      <ins
+        class="adsbygoogle"
+        style="display:block;width:100%"
+        data-ad-client={SITE.adsenseClient}
+        data-ad-slot={slot}
+        data-ad-format={pos === 'sidebar' ? 'vertical' : 'auto'}
+        data-full-width-responsive="true"
+      />
+    </div>
+  )
+}
+{
+  showPlaceholder && (
+    <div
+      class="ad-slot rounded-lg border-2 border-dashed border-zinc-300 text-xs uppercase tracking-widest text-zinc-400"
+      data-pos={pos}
+    >
+      Ad · {pos} (dev only)
+    </div>
+  )
+}
+
+{
+  enabled && (
+    <script is:inline define:vars={{ client: SITE.adsenseClient }}>
+      if (!window.__adsInit) {
+        window.__adsInit = true;
+        let loaded = false;
+        const load = () => {
+          if (loaded) return;
+          loaded = true;
+          const s = document.createElement('script');
+          s.async = true;
+          s.crossOrigin = 'anonymous';
+          s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + client;
+          document.head.appendChild(s);
+        };
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const e of entries) {
+              if (!e.isIntersecting) continue;
+              io.unobserve(e.target);
+              load();
+              (window.adsbygoogle = window.adsbygoogle || []).push({});
+            }
+          },
+          { rootMargin: '600px 0px' },
+        );
+        const observe = () => document.querySelectorAll('ins.adsbygoogle').forEach((el) => io.observe(el));
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', observe);
+        else observe();
+      }
+    </script>
+  )
+}

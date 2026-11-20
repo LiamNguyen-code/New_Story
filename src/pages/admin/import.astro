@@ -1,0 +1,307 @@
+---
+// Thêm truyện: nhập thông tin + (tuỳ chọn) dán toàn bộ truyện → tự tách chương → lưu qua kết nối chung của admin.
+import { getCollection } from 'astro:content';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { GENRES } from '../../lib/content';
+
+const authors = (await getCollection('authors')).map((a) => ({ id: a.id, name: a.data.name }));
+const today = new Date().toISOString().slice(0, 10);
+const input =
+  'mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-blue-100';
+const cardCls = 'space-y-4 rounded-xl border border-zinc-200 bg-white p-4 sm:p-5';
+const hint = 'mt-1 block text-xs font-normal text-zinc-500';
+---
+
+<AdminLayout title="Thêm truyện">
+  <div id="connect"></div>
+
+  <form id="import-form" class="hidden" novalidate>
+    <div class="sticky top-14 z-30 -mx-4 mb-6 border-b border-zinc-200 bg-zinc-50/95 px-4 py-3 backdrop-blur">
+      <nav class="mb-1 flex items-center gap-1.5 text-xs text-zinc-500">
+        <a href="/admin/" class="hover:text-accent">Truyện</a><span class="text-zinc-300">/</span><span>Thêm truyện</span>
+      </nav>
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <h1 class="mr-auto text-xl font-bold text-slate-900 sm:text-2xl">Thêm truyện</h1>
+        <a href="/admin/" class="inline-flex items-center rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50">Huỷ</a>
+        <button type="submit" data-save class="inline-flex items-center rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50">
+          Lưu truyện
+        </button>
+      </div>
+    </div>
+
+    <p data-status role="alert" class="mb-4 hidden rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700"></p>
+
+    <div class="grid gap-5 lg:grid-cols-[1fr_340px]">
+      <div class="min-w-0 space-y-5">
+        <section class={cardCls}>
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-500">1. Thông tin truyện</h2>
+          <label class="block text-sm font-medium">
+            Tên truyện *
+            <input name="title" required class={input} placeholder="VD: The Mafia Boss Ignored His Deaf Mother's Hands" />
+          </label>
+          <label class="block text-sm font-medium">
+            Slug (URL) *
+            <input name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" class={input + ' font-mono'} />
+            <span class={hint}>Tự tạo từ tên truyện, có thể sửa (chỉ a-z, 0-9, dấu gạch ngang; nên ≤ 60 ký tự). Link: <span data-url class="font-mono"></span></span>
+            <span data-slug-warning class="mt-1 hidden text-xs font-semibold text-red-600">Slug này đã có truyện khác dùng.</span>
+          </label>
+          <label class="block text-sm font-medium">
+            Mô tả ngắn * <span class="font-normal text-zinc-400" data-desc-count>0/200</span>
+            <textarea name="description" required maxlength="200" rows="3" class={input} placeholder="1–2 câu hấp dẫn, hiện trên thẻ truyện và Google"></textarea>
+          </label>
+          <label class="block text-sm font-medium">
+            Tóm tắt
+            <textarea name="summary" rows="4" class={input} placeholder="Hiện ở đầu trang giới thiệu truyện. Để trống = dùng mô tả ngắn."></textarea>
+          </label>
+        </section>
+
+        <section class={cardCls}>
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-500">2. Nội dung các chương</h2>
+            <span class="text-xs text-zinc-500">Không bắt buộc. Có thể thêm chương sau.</span>
+          </div>
+          <details class="rounded-lg bg-blue-50 px-3 py-2 text-sm text-slate-700" open>
+            <summary class="cursor-pointer font-medium text-accent">Cách dán truyện</summary>
+            <p class="mt-2">Dán toàn bộ truyện vào ô bên dưới. Mỗi chương bắt đầu bằng 1 dòng tiêu đề, hệ thống tự tách thành từng chương:</p>
+            <pre class="mt-2 overflow-x-auto rounded bg-white p-2 text-xs leading-5">Chapter 1 - The Warning After Dessert
+Chloe Bennett had almost reached the kitchen...
+It was not Gabriel Costello...
+
+Chapter 2 - The Car Across the Street
+The black sedan was still there...</pre>
+            <p class="mt-2 text-xs text-zinc-600">
+              Cũng nhận: <code>Chapter 3: Tên</code>, <code>## Chapter 4</code>, <code>Chương 5. Tên</code>. Không dán gì = tạo truyện trống (lưu ở dạng nháp), thêm chương sau.
+            </p>
+          </details>
+          <textarea
+            name="fulltext"
+            rows="16"
+            class={input + ' font-mono text-xs leading-5'}
+            placeholder={'Chapter 1 - Tên chương\nNội dung chương 1...\n\nChapter 2 - Tên chương\nNội dung chương 2...'}></textarea>
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="lineParagraphs" checked class="h-4 w-4" /> Mỗi dòng xuống hàng là một đoạn văn mới
+          </label>
+          <div>
+            <h3 class="text-sm font-semibold">Xem trước: <span data-chapter-count>0</span> chương</h3>
+            <p data-preview-empty class="mt-1 text-xs text-zinc-500">Dán nội dung để xem các chương được tách. Bấm vào tên chương để sửa.</p>
+            <ol data-preview class="mt-2 space-y-2"></ol>
+          </div>
+        </section>
+      </div>
+
+      <aside class="min-w-0 space-y-5">
+        <section class={cardCls}>
+          <p class="text-sm font-medium">Ảnh bìa *</p>
+          <div>
+            <img data-cover-preview alt="" class="hidden aspect-[1200/630] w-full rounded-lg object-cover" />
+            <div data-cover-empty class="flex aspect-[1200/630] w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-zinc-300 text-xs text-zinc-500">
+              Chưa có ảnh bìa
+            </div>
+            <label class="mt-2 inline-flex w-full cursor-pointer items-center justify-center rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50">
+              <span data-cover-label>Chọn ảnh bìa…</span>
+              <input type="file" name="cover" accept="image/*" class="sr-only" />
+            </label>
+            <span class={hint}>Tự cắt về 1200×630 và nén WebP. Ảnh ngang cho kết quả đẹp nhất.</span>
+          </div>
+          <label class="block text-sm font-medium">
+            Mô tả ảnh (alt)
+            <input name="coverAlt" class={input} placeholder="Mô tả ngắn nội dung ảnh" />
+          </label>
+        </section>
+
+        <section class={cardCls}>
+          <label class="flex items-center gap-2 text-sm font-medium"><input type="checkbox" name="draft" class="h-4 w-4" /> Nháp (ẩn khỏi site)</label>
+          <label class="flex items-center gap-2 text-sm font-medium"><input type="checkbox" name="featured" class="h-4 w-4" /> Nổi bật (lên đầu trang chủ)</label>
+          <label class="block text-sm font-medium">
+            Ngày đăng
+            <input type="date" name="publishDate" value={today} required class={input} />
+            <span class={hint}>Chọn ngày tương lai để hẹn giờ đăng.</span>
+          </label>
+          <label class="block text-sm font-medium">
+            Tình trạng
+            <select name="status" class={input}>
+              <option value="completed">Hoàn thành</option>
+              <option value="ongoing">Đang ra</option>
+            </select>
+          </label>
+        </section>
+
+        <section class={cardCls}>
+          <fieldset>
+            <legend class="text-sm font-medium">Thể loại *</legend>
+            {
+              GENRES.map((g, i) => (
+                <label class="mt-2 flex items-center gap-2 text-sm">
+                  <input type="checkbox" name="genres" value={g.id} checked={i === 0} class="h-4 w-4" /> {g.name}
+                </label>
+              ))
+            }
+          </fieldset>
+          <label class="block text-sm font-medium">
+            Tag
+            <input name="tags" class={input} placeholder="mafia boss, waitress, betrayal" />
+            <span class={hint}>Phân cách bằng dấu phẩy.</span>
+          </label>
+          <label class="block text-sm font-medium">
+            Tác giả
+            <select name="author" class={input}>
+              {authors.map((a) => <option value={a.id}>{a.name}</option>)}
+            </select>
+          </label>
+        </section>
+      </aside>
+    </div>
+  </form>
+</AdminLayout>
+
+<script>
+  import { ensureBackend } from '../../lib/admin/connect';
+  import { PATHS, canDeleteImages, coverPath, parseMd, wordCount } from '../../lib/admin/content';
+  import { cropCover } from '../../lib/admin/dom';
+  import { buildFiles, slugify, splitChapters, type ParsedChapter } from '../../lib/importer';
+
+  main();
+
+  async function main() {
+    const backend = await ensureBackend(document.getElementById('connect')!);
+    const existing = new Set((await backend.listFiles(PATHS.stories)).map((f) => f.replace(/\.md$/, '')));
+
+    const form = document.getElementById('import-form') as HTMLFormElement;
+    form.classList.remove('hidden');
+    const f = (name: string) => form.elements.namedItem(name) as HTMLInputElement;
+    const $ = <T extends HTMLElement>(sel: string) => form.querySelector<T>(sel)!;
+    const status = $('[data-status]');
+    const saveBtn = $<HTMLButtonElement>('[data-save]');
+    let chapters: ParsedChapter[] = [];
+    let coverBlob: Blob | null = null;
+    let slugTouched = false;
+    let dirty = false;
+
+    form.addEventListener('input', () => (dirty = true));
+    addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        saveBtn.click();
+      }
+    });
+
+    // ---- Slug tự sinh + kiểm tra trùng ----
+    const updateSlug = () => {
+      $('[data-url]').textContent = `/story/${f('slug').value || '…'}/`;
+      $('[data-slug-warning]').classList.toggle('hidden', !existing.has(f('slug').value));
+    };
+    f('title').addEventListener('input', () => {
+      if (!slugTouched) f('slug').value = slugify(f('title').value).slice(0, 60).replace(/-+$/, '');
+      updateSlug();
+    });
+    f('slug').addEventListener('input', () => {
+      slugTouched = true;
+      updateSlug();
+    });
+    updateSlug();
+    f('description').addEventListener('input', () => ($('[data-desc-count]').textContent = `${f('description').value.length}/200`));
+
+    // ---- Tách chương + xem trước ----
+    const preview = $<HTMLOListElement>('[data-preview]');
+    function renderPreview() {
+      chapters = splitChapters(f('fulltext').value, f('lineParagraphs').checked);
+      $('[data-chapter-count]').textContent = String(chapters.length);
+      $('[data-preview-empty]').classList.toggle('hidden', chapters.length > 0);
+      preview.replaceChildren(
+        ...chapters.map((c, i) => {
+          const li = document.createElement('li');
+          li.className = 'flex items-center gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2';
+          const num = document.createElement('span');
+          num.className = 'w-8 font-mono text-xs text-zinc-400';
+          num.textContent = String(c.number);
+          const title = document.createElement('input');
+          title.value = c.title;
+          title.className = 'min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm hover:border-zinc-300 focus:border-accent focus:outline-none';
+          title.addEventListener('input', () => (chapters[i].title = title.value));
+          const words = document.createElement('span');
+          const wc = wordCount(c.body);
+          words.className = 'whitespace-nowrap text-xs ' + (wc < 150 ? 'font-semibold text-red-600' : 'text-zinc-500');
+          words.textContent = `${wc} chữ`;
+          li.append(num, title, words);
+          return li;
+        }),
+      );
+    }
+    f('fulltext').addEventListener('input', renderPreview);
+    f('lineParagraphs').addEventListener('change', renderPreview);
+
+    // ---- Ảnh bìa ----
+    f('cover').addEventListener('change', async () => {
+      const file = f('cover').files?.[0];
+      if (!file) return;
+      coverBlob = await cropCover(file);
+      const img = $<HTMLImageElement>('[data-cover-preview]');
+      img.src = URL.createObjectURL(coverBlob);
+      img.classList.remove('hidden');
+      $('[data-cover-empty]').classList.add('hidden');
+      $('[data-cover-label]').textContent = 'Đổi ảnh bìa…';
+    });
+
+    const fail = (msg: string, focus?: HTMLElement) => {
+      status.textContent = msg;
+      status.classList.remove('hidden');
+      focus?.focus();
+      if (!focus) window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      status.classList.add('hidden');
+      const slug = f('slug').value.trim();
+      const genres = [...form.querySelectorAll<HTMLInputElement>('input[name=genres]:checked')].map((i) => i.value);
+      if (!f('title').value.trim()) return fail('Chưa nhập tên truyện.', f('title'));
+      if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) return fail('Slug chỉ gồm chữ thường a-z, số và dấu gạch ngang.', f('slug'));
+      if (!f('description').value.trim()) return fail('Chưa nhập mô tả ngắn.', f('description'));
+      if (!coverBlob) return fail('Chưa chọn ảnh bìa.');
+      if (!genres.length) return fail('Chọn ít nhất 1 thể loại.');
+      if (existing.has(slug) && !confirm(`Truyện "${slug}" đã tồn tại. Ghi đè toàn bộ (kể cả các chương cũ)?`)) return;
+
+      // Truyện chưa có chương thì lưu dạng nháp để không hiện trang trống trên site
+      const draft = f('draft').checked || chapters.length === 0;
+      const files = buildFiles({
+        slug,
+        title: f('title').value.trim(),
+        description: f('description').value.trim(),
+        summary: f('summary').value.trim(),
+        coverAlt: f('coverAlt').value.trim(),
+        genres,
+        tags: f('tags').value.split(',').map((t) => t.trim()).filter(Boolean),
+        author: (form.elements.namedItem('author') as HTMLSelectElement).value,
+        publishDate: f('publishDate').value,
+        status: (form.elements.namedItem('status') as HTMLSelectElement).value,
+        featured: f('featured').checked,
+        draft,
+        chapters,
+        cover: coverBlob,
+      });
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Đang lưu…';
+      try {
+        // Ghi đè: xoá chương cũ trước khi ghi chương mới; ảnh cũ xoá sau cùng (chỉ khi dùng GitHub)
+        const before: { path: string; content: null; dir?: boolean }[] = [];
+        const after: { path: string; content: null }[] = [];
+        if (existing.has(slug)) {
+          before.push({ path: `${PATHS.chapters}/${slug}`, content: null, dir: true });
+          const old = coverPath(parseMd((await backend.read(`${PATHS.stories}/${slug}.md`)) ?? '').data.cover);
+          if (canDeleteImages(backend) && old?.startsWith(PATHS.covers + '/')) after.push({ path: old, content: null });
+        }
+        await backend.apply([...before, ...files, ...after], `content: import story "${slug}"`);
+        dirty = false;
+        location.href = `/admin/#/story/${encodeURIComponent(slug)}`;
+      } catch (err) {
+        fail((err as Error).message);
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Lưu truyện';
+      }
+    });
+  }
+</script>

@@ -1,0 +1,14 @@
+---
+// Trang quản trị truyện: Danh sách truyện → chương của từng truyện.
+// Toàn bộ chạy trên trình duyệt (xem src/lib/admin/*).
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Stories">
+  <div id="app"><p class="text-sm text-zinc-500">Loading…</p></div>
+</AdminLayout>
+
+<script>
+  import { startApp } from '../../lib/admin/app';
+  startApp(document.getElementById('app')!);
+</script>

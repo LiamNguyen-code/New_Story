@@ -1,0 +1,19 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import NewsList from '../../components/NewsList.astro';
+import { SITE } from '../../site.config';
+import { NEWS_PER_PAGE, getNews } from '../../lib/content';
+
+const all = await getNews();
+const items = all.slice(0, NEWS_PER_PAGE);
+const next = all.length > NEWS_PER_PAGE ? '/news/page/2/' : undefined;
+---
+
+<BaseLayout title={`News | ${SITE.name}`} description={`Latest news and updates from ${SITE.name}.`} next={next}>
+  <Breadcrumbs jsonOnly items={[{ name: 'News' }]} />
+  <div class="mx-auto max-w-[750px] px-4 py-6">
+    <h1 class="sr-only">News</h1>
+    <NewsList items={items} next={next} />
+  </div>
+</BaseLayout>

@@ -1,0 +1,140 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+@theme {
+  --font-sans: 'Segoe UI', -apple-system, BlinkMacSystemFont, Inter, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-logo: Georgia, 'Times New Roman', Times, serif;
+  --font-news: Georgia, 'Times New Roman', Times, serif;
+  --color-accent: #2563eb;
+}
+
+:root {
+  --reader-size: 21px;
+  --tenant-bg: #fafafa;
+  --tenant-text: #09090b;
+  --tenant-muted: #3f3f46;
+  --tenant-border: #e4e4e7;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--tenant-bg);
+  color: var(--tenant-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Nội dung chương */
+.reader {
+  font-size: 18px;
+  line-height: 1.95;
+  color: #1e293b;
+}
+@media (min-width: 768px) {
+  .reader {
+    font-size: var(--reader-size);
+    line-height: 2.05;
+  }
+}
+.reader p {
+  margin: 0 0 1.1em;
+}
+
+/* Nội dung bài tin (News) */
+.news-body {
+  font-size: 16px;
+  line-height: 1.85;
+  color: #18181b;
+}
+@media (min-width: 640px) {
+  .news-body {
+    font-size: 17px;
+  }
+}
+.news-body p {
+  margin: 0 0 1em;
+}
+.news-body h2,
+.news-body h3 {
+  font-family: var(--font-news);
+  font-weight: 700;
+  color: #09090b;
+  line-height: 1.2;
+  margin: 1.6em 0 0.7em;
+}
+.news-body h2 {
+  font-size: 1.75em;
+}
+.news-body h3 {
+  font-size: 1.35em;
+}
+.news-body img {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 1.2em 0 1.4em;
+}
+.news-body a {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+.news-body ul,
+.news-body ol {
+  margin: 0 0 1em 1.4em;
+  list-style: revert;
+}
+.news-body blockquote {
+  margin: 1.4em 0;
+  border-left: 4px solid #e4e4e7;
+  padding-left: 1em;
+  color: #3f3f46;
+  font-style: italic;
+}
+.news-body table {
+  width: 100%;
+  margin: 1.4em 0;
+  border-collapse: collapse;
+  font-size: 0.9em;
+  line-height: 1.5;
+}
+.news-body th {
+  padding: 0.6em 0.5em;
+  text-align: left;
+  font-weight: 700;
+  border-bottom: 2px solid #e4e4e7;
+}
+.news-body td {
+  padding: 0.5em;
+  border-bottom: 1px solid #f4f4f5;
+  vertical-align: top;
+}
+
+/* Khung quảng cáo giữ sẵn chiều cao để không gây CLS */
+.ad-slot {
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 2rem auto;
+  overflow: hidden;
+}
+
+.line-clamp-2,
+.line-clamp-3,
+.line-clamp-5 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-2 {
+  -webkit-line-clamp: 2;
+}
+.line-clamp-3 {
+  -webkit-line-clamp: 3;
+}
+.line-clamp-5 {
+  -webkit-line-clamp: 5;
+}

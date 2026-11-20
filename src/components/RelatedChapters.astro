@@ -1,0 +1,35 @@
+---
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import { chapterUrl, type Chapter } from '../lib/content';
+
+interface Props {
+  slug: string;
+  cover: ImageMetadata;
+  chapters: Chapter[];
+}
+const { slug, cover, chapters } = Astro.props;
+---
+
+{
+  chapters.length > 0 && (
+    <section class="mt-10" aria-labelledby="related-heading">
+      <h2 id="related-heading" class="mb-4 text-lg font-bold text-slate-900">
+        Related Stories
+      </h2>
+      <div class="grid gap-3 sm:grid-cols-2">
+        {chapters.map((c) => (
+          <a
+            href={chapterUrl(slug, c.data.number)}
+            class="flex h-[88px] items-center overflow-hidden rounded-xl border border-zinc-200 bg-white hover:shadow-sm"
+          >
+            <Image src={cover} alt="" widths={[176]} sizes="88px" class="h-full w-[88px] shrink-0 object-cover" />
+            <span class="line-clamp-2 px-3 text-[13px] font-medium leading-snug text-slate-900">
+              Chapter {c.data.number} - {c.data.title}
+            </span>
+          </a>
+        ))}
+      </div>
+    </section>
+  )
+}

@@ -1,0 +1,20 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import StoryCard from '../components/StoryCard.astro';
+import { SITE } from '../site.config';
+import { getStories } from '../lib/content';
+
+const stories = (await getStories()).slice(0, 3);
+---
+
+<BaseLayout title={`Page not found | ${SITE.name}`} description="The page you are looking for does not exist." noindex>
+  <div class="mx-auto max-w-5xl px-4 py-16 text-center">
+    <p class="font-mono text-sm font-semibold text-accent">404</p>
+    <h1 class="mt-2 text-4xl font-bold">This page has vanished</h1>
+    <p class="mt-3 text-zinc-600">Like a secret in one of our stories. Try one of these instead:</p>
+    <div class="mt-10 grid gap-6 text-left sm:grid-cols-3">
+      {stories.map((s) => <StoryCard story={s} variant="small" />)}
+    </div>
+    <a href="/" class="mt-10 inline-block rounded-full bg-accent px-6 py-3 font-semibold text-white">Back to home</a>
+  </div>
+</BaseLayout>

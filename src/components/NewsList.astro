@@ -1,0 +1,50 @@
+---
+// Danh sách tin + nút "Load more" (link tới trang sau; có JS thì tải thêm ngay tại chỗ).
+import NewsCard from './NewsCard.astro';
+import type { News } from '../lib/content';
+
+interface Props {
+  items: News[];
+  next?: string;
+}
+const { items, next } = Astro.props;
+---
+
+<div data-news-list class="space-y-4">
+  {items.map((n, i) => <NewsCard item={n} eager={i === 0} />)}
+</div>
+{items.length === 0 && <p class="py-10 text-center text-zinc-500">No news yet. Check back soon!</p>}
+{
+  next && (
+    <div class="mt-6 text-center">
+      <a
+        href={next}
+        data-load-more
+        class="inline-block rounded-full border border-blue-200 bg-white px-6 py-2 text-xs font-bold text-blue-700 shadow-sm hover:bg-blue-50"
+      >
+        Load more
+      </a>
+    </div>
+  )
+}
+
+<script>
+  // Tải trang tiếp theo và nối thẻ tin vào danh sách hiện tại
+  const btn = document.querySelector<HTMLAnchorElement>('[data-load-more]');
+  const list = document.querySelector('[data-news-list]');
+  btn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    btn.textContent = 'Loading…';
+    try {
+      const doc = new DOMParser().parseFromString(await (await fetch(btn.href)).text(), 'text/html');
+      list?.append(...doc.querySelectorAll('[data-news-list] > *'));
+      const next = doc.querySelector<HTMLAnchorElement>('[data-load-more]');
+      if (next) {
+        btn.href = next.href;
+        btn.textContent = 'Load more';
+      } else btn.parentElement?.remove();
+    } catch {
+      location.href = btn.href;
+    }
+  });
+</script>

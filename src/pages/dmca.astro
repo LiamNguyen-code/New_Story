@@ -1,0 +1,20 @@
+---
+import PageLayout from '../layouts/PageLayout.astro';
+import { SITE } from '../site.config';
+---
+
+<PageLayout title={`DMCA / Copyright | ${SITE.name}`} heading="DMCA & Copyright" description={`How to report copyright infringement on ${SITE.name}.`}>
+  <p>
+    {SITE.name} respects the intellectual property of others. If you believe any content on our site infringes your copyright, please send
+    a notice through our <a href="/contact/">contact page</a> including:
+  </p>
+  <ol>
+    <li>A description of the copyrighted work you claim has been infringed.</li>
+    <li>The URL(s) of the infringing material on our site.</li>
+    <li>Your name, address, telephone number and email address.</li>
+    <li>A statement that you have a good-faith belief that the use is not authorized by the copyright owner.</li>
+    <li>A statement, under penalty of perjury, that the information is accurate and you are the owner or authorized to act on their behalf.</li>
+    <li>Your physical or electronic signature.</li>
+  </ol>
+  <p>We will review valid notices promptly and remove infringing content where appropriate.</p>
+</PageLayout>

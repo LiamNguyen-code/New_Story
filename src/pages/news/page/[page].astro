@@ -1,0 +1,26 @@
+---
+// /news/page/2/, /news/page/3/... (trang 1 là /news/)
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../../components/Breadcrumbs.astro';
+import NewsList from '../../../components/NewsList.astro';
+import { SITE } from '../../../site.config';
+import { NEWS_PER_PAGE, getNews } from '../../../lib/content';
+
+export const getStaticPaths = (async ({ paginate }) => {
+  // Bỏ trang 1 (đã có ở /news/)
+  return paginate(await getNews(), { pageSize: NEWS_PER_PAGE }).filter((p) => p.params.page !== undefined && String(p.params.page) !== '1');
+}) satisfies GetStaticPaths;
+
+const { page } = Astro.props;
+const prev = page.currentPage === 2 ? '/news/' : page.url.prev;
+const next = page.url.next ? `/news/page/${page.currentPage + 1}/` : undefined;
+---
+
+<BaseLayout title={`News – Page ${page.currentPage} | ${SITE.name}`} description={`Latest news from ${SITE.name}, page ${page.currentPage}.`} prev={prev} next={next}>
+  <Breadcrumbs jsonOnly items={[{ name: 'News', href: '/news/' }, { name: `Page ${page.currentPage}` }]} />
+  <div class="mx-auto max-w-[750px] px-4 py-6">
+    <h1 class="sr-only">News – Page {page.currentPage}</h1>
+    <NewsList items={page.data} next={next} />
+  </div>
+</BaseLayout>

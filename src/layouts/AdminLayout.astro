@@ -1,0 +1,53 @@
+---
+import '../styles/global.css';
+import { SITE } from '../site.config';
+
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+const path = Astro.url.pathname;
+const nav = [
+  { href: '/admin/', label: 'Truyện' },
+  { href: '/admin/import/', label: '+ Thêm truyện' },
+];
+---
+
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>{title} · {SITE.name} Admin</title>
+  </head>
+  <body class="min-h-screen bg-zinc-50">
+    <header class="sticky top-0 z-40 border-b border-zinc-200 bg-white">
+      <div class="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4 sm:gap-6">
+        <a href="/admin/" class="flex shrink-0 items-baseline gap-1.5 whitespace-nowrap">
+          <span class="hidden font-logo text-lg font-bold sm:inline">{SITE.name.toLowerCase()}</span>
+          <span class="rounded bg-accent px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-white">ADMIN</span>
+        </a>
+        <nav class="flex flex-1 items-center gap-1 whitespace-nowrap text-sm">
+          {
+            nav.map((n) => (
+              <a
+                href={n.href}
+                class:list={['rounded-md px-2.5 py-1.5 hover:bg-zinc-100 sm:px-3', path === n.href ? 'bg-zinc-100 font-semibold text-zinc-900' : 'text-zinc-600']}
+              >
+                {n.label}
+              </a>
+            ))
+          }
+        </nav>
+        <span id="conn-status" class="hidden max-w-[240px] truncate text-xs text-zinc-500 lg:block"></span>
+        <div id="publish-slot"></div>
+        <a href="/" target="_blank" class="whitespace-nowrap text-sm text-accent hover:underline">Xem site ↗</a>
+      </div>
+    </header>
+    <main class="mx-auto max-w-6xl px-4 pb-24 pt-4">
+      <slot />
+    </main>
+  </body>
+</html>

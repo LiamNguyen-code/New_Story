@@ -1,0 +1,32 @@
+---
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import StoryGrid from '../../../components/StoryGrid.astro';
+import Breadcrumbs from '../../../components/Breadcrumbs.astro';
+import { SITE } from '../../../site.config';
+import { GENRES, getStories } from '../../../lib/content';
+
+export const getStaticPaths = (async ({ paginate }) => {
+  const stories = await getStories();
+  return GENRES.flatMap((genre) =>
+    paginate(
+      stories.filter((s) => s.data.genres.includes(genre.id)),
+      { params: { genre: genre.id }, props: { genre }, pageSize: SITE.storiesPerPage },
+    ),
+  );
+}) satisfies GetStaticPaths;
+
+const { page, genre } = Astro.props;
+const suffix = page.currentPage > 1 ? ` – Page ${page.currentPage}` : '';
+---
+
+<BaseLayout
+  title={`${genre.name} Stories${suffix} | ${SITE.name}`}
+  description={genre.description}
+  prev={page.url.prev}
+  next={page.url.next}
+  noindex={page.total === 0}
+>
+  <Breadcrumbs jsonOnly items={[{ name: 'Genres', href: '/genres/' }, { name: genre.name }]} />
+  <StoryGrid heading={`${genre.name}${suffix}`} subheading={genre.description} stories={page.data} prev={page.url.prev} next={page.url.next} />
+</BaseLayout>

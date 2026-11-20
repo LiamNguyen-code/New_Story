@@ -1,0 +1,19 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import StoryGrid from '../components/StoryGrid.astro';
+import ContinueReading from '../components/ContinueReading.astro';
+import { SITE } from '../site.config';
+import { getStories } from '../lib/content';
+
+const stories = await getStories();
+// Truyện "featured" lên đầu, còn lại theo ngày mới nhất
+const sorted = [...stories.filter((s) => s.data.featured), ...stories.filter((s) => !s.data.featured)];
+const pageItems = sorted.slice(0, SITE.storiesPerPage);
+const next = stories.length > SITE.storiesPerPage ? '/page/2/' : undefined;
+---
+
+<BaseLayout title={`${SITE.name} – ${SITE.tagline}`} description={SITE.description} next={next}>
+  <StoryGrid heading="Recent Stories" subheading={`Latest updates, analysis, and insights from ${SITE.name.toLowerCase()}.`} stories={pageItems} next={next}>
+    <ContinueReading />
+  </StoryGrid>
+</BaseLayout>

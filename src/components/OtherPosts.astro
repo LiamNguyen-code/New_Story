@@ -1,0 +1,26 @@
+---
+import StoryCard from './StoryCard.astro';
+import type { Story } from '../lib/content';
+
+interface Props {
+  stories: Story[];
+}
+const { stories } = Astro.props;
+---
+
+{
+  stories.length > 0 && (
+    <section class="mx-auto mt-12 max-w-[1000px] px-4 sm:px-6" aria-labelledby="other-heading">
+      <div class="border-t border-zinc-200 pt-8">
+        <h2 id="other-heading" class="mb-4 text-lg font-bold text-slate-900">
+          Other posts
+        </h2>
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {stories.map((s) => (
+            <StoryCard story={s} variant="small" />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}

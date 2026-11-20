@@ -1,0 +1,50 @@
+---
+import { SITE } from '../site.config';
+
+export interface Crumb {
+  name: string;
+  href?: string;
+}
+interface Props {
+  items: Crumb[];
+  /** Chỉ xuất JSON-LD, không hiển thị (khi trang tự vẽ breadcrumb riêng) */
+  jsonOnly?: boolean;
+}
+const { jsonOnly = false } = Astro.props;
+const items: Crumb[] = [{ name: 'Home', href: '/' }, ...Astro.props.items];
+
+const ld = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: items.map((c, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: c.name,
+    ...(c.href ? { item: new URL(c.href, SITE.url).href } : {}),
+  })),
+};
+---
+
+{
+  !jsonOnly && (
+    <nav aria-label="Breadcrumb" class="text-[13px] text-zinc-500">
+      <ol class="flex flex-wrap items-center gap-1">
+        {items.map((c, i) => (
+          <li class="flex items-center gap-1">
+            {i > 0 && <span aria-hidden="true" class="text-zinc-300">/</span>}
+            {c.href && i < items.length - 1 ? (
+              <a href={c.href} class="hover:text-accent">
+                {c.name}
+              </a>
+            ) : (
+              <span aria-current="page" class="line-clamp-1 text-zinc-700">
+                {c.name}
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  )
+}
+<script is:inline type="application/ld+json" set:html={JSON.stringify(ld)} />

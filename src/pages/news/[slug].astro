@@ -1,0 +1,112 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { Image } from 'astro:assets';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import ShareButtons from '../../components/ShareButtons.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import NewsCard from '../../components/NewsCard.astro';
+import { SITE } from '../../site.config';
+import { excerpt, formatLongDate, getNews, newsUrl, type News } from '../../lib/content';
+import { ogImage } from '../../lib/og';
+
+export const getStaticPaths = (async () => {
+  const all = await getNews();
+  return all.map((item) => ({ params: { slug: item.id }, props: { item, all } }));
+}) satisfies GetStaticPaths;
+
+const { item, all } = Astro.props as { item: News; all: News[] };
+const { data } = item;
+
+// Chèn quảng cáo giữa bài sau đoạn văn thứ N
+const html = item.rendered?.html ?? '';
+const parts = html.split('</p>');
+const after = SITE.inContentAdAfterParagraph;
+const hasAd = parts.length > after + 3;
+const first = hasAd ? parts.slice(0, after).join('</p>') + '</p>' : html;
+const rest = hasAd ? parts.slice(after).join('</p>') : '';
+
+const related = all.filter((n) => n.id !== item.id).slice(0, 6);
+const description = data.description ?? excerpt(item.body ?? '');
+const title = data.seoTitle ?? (data.title.length + SITE.name.length + 3 <= 65 ? `${data.title} | ${SITE.name}` : data.title);
+const url = new URL(newsUrl(item.id), SITE.url).href;
+const og = await ogImage(data.cover);
+
+const ld = {
+  '@context': 'https://schema.org',
+  '@type': 'NewsArticle',
+  headline: data.title.slice(0, 110),
+  description,
+  image: [new URL(og, SITE.url).href],
+  datePublished: data.publishDate.toISOString(),
+  dateModified: (data.updatedDate ?? data.publishDate).toISOString(),
+  mainEntityOfPage: url,
+  author: { '@type': 'Organization', name: SITE.name, url: SITE.url },
+  publisher: { '@type': 'Organization', name: SITE.name, url: SITE.url },
+  ...(data.category ? { articleSection: data.category } : {}),
+};
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  image={og}
+  imageAlt={data.coverAlt ?? data.title}
+  type="article"
+  publishedTime={data.publishDate}
+  modifiedTime={data.updatedDate}
+  jsonLd={ld}
+>
+  <Breadcrumbs jsonOnly items={[{ name: 'News', href: '/news/' }, { name: data.title }]} />
+
+  <article class="mx-auto max-w-[750px] px-4 pb-6 pt-10 sm:pt-16">
+    <header>
+      <h1 class="font-news text-[30px] font-bold uppercase leading-[1.12] text-zinc-950 sm:text-[46px]">{data.title}</h1>
+      <p class="mt-3 flex items-center gap-1.5 text-[15px] text-zinc-500 sm:text-[18px]">
+        <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="currentColor" aria-hidden="true"
+          ><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .25.43l3.5 2a.5.5 0 0 0 .5-.86L8 8.71V3.5z"></path><path
+            d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"></path></svg
+        >
+        <time datetime={data.publishDate.toISOString()}>Posted {formatLongDate(data.publishDate)}</time>
+        {data.category && <span class="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">{data.category}</span>}
+      </p>
+    </header>
+
+    <AdSlot pos="top" />
+
+    <Image
+      src={data.cover}
+      alt={data.coverAlt ?? data.title}
+      widths={[480, 750, 1200]}
+      sizes="(min-width: 782px) 750px, 100vw"
+      loading="eager"
+      fetchpriority="high"
+      class="mt-6 w-full"
+    />
+
+    <div class="news-body mt-8">
+      <Fragment set:html={first} />
+      {hasAd && <AdSlot pos="inContent" />}
+      {rest && <Fragment set:html={rest} />}
+    </div>
+
+    <div class="mt-10"><ShareButtons title={data.title} /></div>
+
+    <AdSlot pos="bottom" />
+  </article>
+
+  {
+    related.length > 0 && (
+      <section class="mx-auto max-w-[750px] px-4 pb-10" aria-labelledby="related-news">
+        <h2 id="related-news" class="mb-4 text-lg font-bold text-zinc-900">
+          More news
+        </h2>
+        <div class="space-y-4">
+          {related.map((n) => (
+            <NewsCard item={n} />
+          ))}
+        </div>
+      </section>
+    )
+  }
+</BaseLayout>

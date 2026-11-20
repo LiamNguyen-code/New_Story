@@ -1,0 +1,27 @@
+---
+import StoryCard from './StoryCard.astro';
+import Pagination from './Pagination.astro';
+import type { Story } from '../lib/content';
+
+interface Props {
+  heading: string;
+  subheading?: string;
+  stories: Story[];
+  prev?: string;
+  next?: string;
+}
+const { heading, subheading, stories, prev, next } = Astro.props;
+---
+
+<div class="mx-auto max-w-[1280px] px-4 pb-10 pt-12 sm:px-4">
+  <header class="mb-10 text-center">
+    <h1 class="text-[32px] font-semibold tracking-tight text-slate-900 sm:text-[40px]">{heading}</h1>
+    {subheading && <p class="mt-3 text-[15px] text-zinc-600">{subheading}</p>}
+  </header>
+  <slot />
+  {stories.length === 0 && <p class="text-center text-zinc-500">No stories yet. Check back soon!</p>}
+  <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    {stories.map((s, i) => <StoryCard story={s} eager={i < 3} />)}
+  </div>
+  <Pagination prev={prev} next={next} />
+</div>
