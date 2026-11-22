@@ -22,8 +22,8 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get -y upgrade
 apt-get install -y curl git nginx ufw fail2ban unattended-upgrades sqlite3 build-essential python3 ca-certificates
-if ! command -v node >/dev/null || [ "$(node -v | cut -d. -f1)" != "v20" ]; then
-  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+if ! command -v node >/dev/null || [ "$(node -v | cut -d. -f1)" != "v22" ]; then
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
   apt-get install -y nodejs
 fi
 echo "Node $(node -v), npm $(npm -v)"
