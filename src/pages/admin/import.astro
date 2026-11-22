@@ -1,10 +1,11 @@
 ---
-// Thêm truyện: nhập thông tin + (tuỳ chọn) dán toàn bộ truyện → tự tách chương → lưu qua kết nối chung của admin.
-import { getCollection } from 'astro:content';
+// Thêm truyện: nhập thông tin + (tuỳ chọn) dán toàn bộ truyện → tự tách chương → lưu vào database qua API admin.
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { GENRES } from '../../lib/content';
+import { listAuthors, listStories } from '../../lib/server/admin';
 
-const authors = (await getCollection('authors')).map((a) => ({ id: a.id, name: a.data.name }));
+const authors = listAuthors();
+const existingSlugs = listStories().map((s) => s.slug);
 const today = new Date().toISOString().slice(0, 10);
 const input =
   'mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-blue-100';
@@ -13,9 +14,7 @@ const hint = 'mt-1 block text-xs font-normal text-zinc-500';
 ---
 
 <AdminLayout title="Thêm truyện">
-  <div id="connect"></div>
-
-  <form id="import-form" class="hidden" novalidate>
+  <form id="import-form" novalidate data-existing={JSON.stringify(existingSlugs)}>
     <div class="sticky top-14 z-30 -mx-4 mb-6 border-b border-zinc-200 bg-zinc-50/95 px-4 py-3 backdrop-blur">
       <nav class="mb-1 flex items-center gap-1.5 text-xs text-zinc-500">
         <a href="/admin/" class="hover:text-accent">Truyện</a><span class="text-zinc-300">/</span><span>Thêm truyện</span>
@@ -155,19 +154,15 @@ The black sedan was still there...</pre>
 </AdminLayout>
 
 <script>
-  import { ensureBackend } from '../../lib/admin/connect';
-  import { PATHS, canDeleteImages, coverPath, parseMd, wordCount } from '../../lib/admin/content';
+  import { createStory, wordCount } from '../../lib/admin/content';
   import { cropCover } from '../../lib/admin/dom';
-  import { buildFiles, slugify, splitChapters, type ParsedChapter } from '../../lib/importer';
+  import { slugify, splitChapters, type ParsedChapter } from '../../lib/importer';
 
   main();
 
-  async function main() {
-    const backend = await ensureBackend(document.getElementById('connect')!);
-    const existing = new Set((await backend.listFiles(PATHS.stories)).map((f) => f.replace(/\.md$/, '')));
-
+  function main() {
     const form = document.getElementById('import-form') as HTMLFormElement;
-    form.classList.remove('hidden');
+    const existing = new Set<string>(JSON.parse(form.dataset.existing ?? '[]'));
     const f = (name: string) => form.elements.namedItem(name) as HTMLInputElement;
     const $ = <T extends HTMLElement>(sel: string) => form.querySelector<T>(sel)!;
     const status = $('[data-status]');
@@ -266,35 +261,30 @@ The black sedan was still there...</pre>
 
       // Truyện chưa có chương thì lưu dạng nháp để không hiện trang trống trên site
       const draft = f('draft').checked || chapters.length === 0;
-      const files = buildFiles({
+      const story = {
         slug,
-        title: f('title').value.trim(),
-        description: f('description').value.trim(),
-        summary: f('summary').value.trim(),
-        coverAlt: f('coverAlt').value.trim(),
-        genres,
-        tags: f('tags').value.split(',').map((t) => t.trim()).filter(Boolean),
-        author: (form.elements.namedItem('author') as HTMLSelectElement).value,
-        publishDate: f('publishDate').value,
-        status: (form.elements.namedItem('status') as HTMLSelectElement).value,
-        featured: f('featured').checked,
-        draft,
+        overwrite: existing.has(slug),
+        body: f('summary').value.trim() || f('description').value.trim(),
+        data: {
+          title: f('title').value.trim(),
+          description: f('description').value.trim(),
+          coverAlt: f('coverAlt').value.trim(),
+          genres,
+          tags: f('tags').value.split(',').map((t) => t.trim()).filter(Boolean),
+          author: (form.elements.namedItem('author') as HTMLSelectElement).value,
+          publishDate: f('publishDate').value,
+          status: (form.elements.namedItem('status') as HTMLSelectElement).value === 'ongoing' ? ('ongoing' as const) : ('completed' as const),
+          featured: f('featured').checked,
+          draft,
+        },
         chapters,
-        cover: coverBlob,
-      });
+      };
 
       saveBtn.disabled = true;
       saveBtn.textContent = 'Đang lưu…';
       try {
-        // Ghi đè: xoá chương cũ trước khi ghi chương mới; ảnh cũ xoá sau cùng (chỉ khi dùng GitHub)
-        const before: { path: string; content: null; dir?: boolean }[] = [];
-        const after: { path: string; content: null }[] = [];
-        if (existing.has(slug)) {
-          before.push({ path: `${PATHS.chapters}/${slug}`, content: null, dir: true });
-          const old = coverPath(parseMd((await backend.read(`${PATHS.stories}/${slug}.md`)) ?? '').data.cover);
-          if (canDeleteImages(backend) && old?.startsWith(PATHS.covers + '/')) after.push({ path: old, content: null });
-        }
-        await backend.apply([...before, ...files, ...after], `content: import story "${slug}"`);
+        // Ghi đè (slug đã có): server xoá chương cũ và ảnh bìa cũ
+        await createStory(story, coverBlob);
         dirty = false;
         location.href = `/admin/#/story/${encodeURIComponent(slug)}`;
       } catch (err) {

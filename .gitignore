@@ -5,5 +5,5 @@ dist/
 .env.*
 !.env.example
 .DS_Store
-.wrangler/
-.dev.vars
+# Database SQLite + ảnh upload
+data/

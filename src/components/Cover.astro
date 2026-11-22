@@ -1,0 +1,28 @@
+---
+// Ảnh bìa truyện (uploads/covers): srcset nhiều kích thước WebP tạo sẵn lúc upload.
+import { coverSrcset, coverUrl } from '../lib/content';
+
+interface Props {
+  name: string;
+  alt: string;
+  sizes: string;
+  widths?: (240 | 480 | 800 | 1200)[];
+  class?: string;
+  loading?: 'eager' | 'lazy';
+  fetchpriority?: 'high' | 'auto';
+}
+const { name, alt, sizes, widths = [480, 800, 1200], class: cls, loading = 'lazy', fetchpriority = 'auto' } = Astro.props;
+---
+
+<img
+  src={coverUrl(name, widths[widths.length - 1])}
+  srcset={coverSrcset(name, widths)}
+  sizes={sizes}
+  alt={alt}
+  width="1200"
+  height="630"
+  loading={loading}
+  decoding="async"
+  fetchpriority={fetchpriority}
+  class={cls}
+/>

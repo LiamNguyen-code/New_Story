@@ -1,8 +1,6 @@
 ---
-import type { GetStaticPaths } from 'astro';
-import { Image } from 'astro:assets';
-import { getEntry, render } from 'astro:content';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Cover from '../../../components/Cover.astro';
 import Breadcrumbs from '../../../components/Breadcrumbs.astro';
 import CrumbBar from '../../../components/CrumbBar.astro';
 import ShareButtons from '../../../components/ShareButtons.astro';
@@ -17,30 +15,27 @@ import {
   formatDate,
   genreName,
   genreUrl,
-  getChaptersByStory,
+  getAuthor,
+  getChapters,
   getStories,
-  readingMinutes,
+  getStory,
+  minutesFromWords,
+  ogImageUrl,
+  renderMarkdown,
   storyUrl,
   tagUrl,
-  type Story,
 } from '../../../lib/content';
-import { ogImage } from '../../../lib/og';
 
-export const getStaticPaths = (async () => {
-  const stories = await getStories();
-  return stories.map((story) => ({ params: { slug: story.id }, props: { story, all: stories } }));
-}) satisfies GetStaticPaths;
+const story = await getStory(Astro.params.slug ?? '');
+if (!story) return Astro.rewrite('/404/');
 
-const { story, all } = Astro.props as { story: Story; all: Story[] };
 const { data } = story;
-const chapters = (await getChaptersByStory()).get(story.id) ?? [];
-const author = await getEntry(data.author);
-const { Content } = await render(story);
-const totalMinutes = chapters.reduce((sum, c) => sum + readingMinutes(c.body), 0);
+const [chapters, author, all] = await Promise.all([getChapters(story), getAuthor(data.author), getStories()]);
+const totalMinutes = chapters.reduce((sum, c) => sum + minutesFromWords(c.wordCount), 0);
 const otherPosts = all.filter((s) => s.id !== story.id).slice(0, 8);
 
 const url = new URL(storyUrl(story.id), SITE.url).href;
-const og = await ogImage(data.cover);
+const og = ogImageUrl(data.cover);
 const title = data.seoTitle ?? (data.title.length + SITE.name.length + 3 <= 65 ? `${data.title} | ${SITE.name}` : data.title);
 const description = data.seoDescription ?? data.description ?? excerpt(story.body ?? '');
 
@@ -57,7 +52,7 @@ const bookLd = {
   inLanguage: SITE.lang,
   datePublished: data.publishDate.toISOString(),
   dateModified: (data.updatedDate ?? data.publishDate).toISOString(),
-  author: { '@type': 'Person', name: author?.data.name ?? SITE.name },
+  author: { '@type': 'Person', name: author?.name ?? SITE.name },
   publisher: { '@type': 'Organization', name: SITE.name, url: SITE.url },
   numberOfPages: chapters.length,
   bookFormat: 'https://schema.org/EBook',
@@ -91,25 +86,23 @@ const bookLd = {
       <article data-pagefind-body>
         <h1 class="mt-6 text-[28px] font-bold leading-[1.15] tracking-tight text-slate-900 sm:text-[42px] xl:text-[50px]">{data.title}</h1>
         <p class="mt-4 flex flex-wrap gap-x-3 text-[13px] text-zinc-500" data-pagefind-ignore>
-          {author && <span>By <strong class="font-semibold text-zinc-700">{author.data.name}</strong></span>}
+          {author && <span>By <strong class="font-semibold text-zinc-700">{author.name}</strong></span>}
           <time datetime={data.publishDate.toISOString()}>{formatDate(data.publishDate)}</time>
           <span>· ~{totalMinutes} min read</span>
           <span>· {data.status === 'completed' ? 'Completed' : 'Ongoing'}</span>
         </p>
 
-        <Image
-          src={data.cover}
+        <Cover
+          name={data.cover}
           alt={data.coverAlt ?? data.title}
-          widths={[480, 760, 1200]}
+          widths={[480, 800, 1200]}
           sizes="(min-width: 1280px) 760px, 100vw"
           loading="eager"
           fetchpriority="high"
           class="mt-8 aspect-[1200/630] w-full rounded-2xl object-cover"
         />
 
-        <div class="reader mt-8">
-          <Content />
-        </div>
+        <div class="reader mt-8" set:html={renderMarkdown(story.body)} />
       </article>
 
       <div class="mt-2 flex flex-wrap gap-2">

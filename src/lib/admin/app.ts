@@ -3,24 +3,21 @@
 //   #/story/<slug>                       chi tiết truyện + danh sách chương
 //   #/story/<slug>/edit                  sửa thông tin truyện
 //   #/story/<slug>/chapter/new           thêm 1 chương
-//   #/story/<slug>/chapter/<file>        sửa chương
+//   #/story/<slug>/chapter/<id>          sửa chương
 //   #/story/<slug>/bulk                  dán thêm nhiều chương
-import type { Backend } from './backend';
-import { disconnectAndReload, ensureBackend } from './connect';
 import {
-  chapterFileName,
-  countChapters,
-  coverPath,
+  addChapters,
+  coverThumb,
   dateOnly,
   deleteChapter,
   deleteStory,
-  loadAuthors,
   loadChapters,
-  loadSettings,
-  loadStories,
+  loadData,
+  logout,
   saveChapter,
   saveStory,
   wordCount,
+  type AdminUser,
   type ChapterRec,
   type Settings,
   type StoryRec,
@@ -28,20 +25,18 @@ import {
 import { btn, coverPicker, h, icon, input, pageBar, toast, type Child } from './dom';
 import { splitChapters } from '../importer';
 
-let b: Backend;
 let root: HTMLElement;
+let user: AdminUser;
 let stories: StoryRec[] = [];
 let counts = new Map<string, number>();
 let settings: Settings = { genres: [] };
 let authors: { id: string; name: string }[] = [];
 let dirty = false;
 let skipNextRoute = false;
-const thumbCache = new Map<string, string>();
 const listState = { q: '', filter: 'all' };
 
 export async function startApp(el: HTMLElement) {
   root = el;
-  b = await ensureBackend(root);
   addEventListener('beforeunload', (e) => {
     if (dirty) e.preventDefault();
   });
@@ -59,13 +54,19 @@ export async function startApp(el: HTMLElement) {
     route();
   });
   show(h('p', { class: 'py-10 text-center text-sm text-zinc-500' }, 'Đang tải danh sách truyện…'));
-  await reload();
+  try {
+    await reload();
+  } catch (e) {
+    return show(h('p', { class: 'py-10 text-center text-sm font-medium text-red-600' }, (e as Error).message));
+  }
   route();
 }
 
 async function reload() {
-  [stories, settings, authors] = await Promise.all([loadStories(b), loadSettings(b), loadAuthors(b)]);
-  counts = new Map(await Promise.all(stories.map(async (s) => [s.slug, await countChapters(b, s.slug)] as const)));
+  const data = await loadData();
+  ({ user, stories, authors } = data);
+  settings = { genres: data.genres };
+  counts = new Map(stories.map((s) => [s.slug, s.chapterCount]));
 }
 
 function route() {
@@ -83,7 +84,7 @@ function route() {
 
 const go = (hash: string) => (location.hash = hash);
 const storyHash = (s: StoryRec) => `#/story/${encodeURIComponent(s.slug)}`;
-const chapterHash = (s: StoryRec, c: ChapterRec) => `${storyHash(s)}/chapter/${encodeURIComponent(c.file)}`;
+const chapterHash = (s: StoryRec, c: ChapterRec) => `${storyHash(s)}/chapter/${c.id}`;
 const show = (...nodes: (Node | false | null | undefined)[]) => root.replaceChildren(...nodes.filter((n): n is Node => !!n));
 const today = () => new Date().toISOString().slice(0, 10);
 const genreName = (id: string) => settings.genres.find((g) => g.id === id)?.name ?? id;
@@ -120,20 +121,7 @@ function statusBadges(s: StoryRec) {
 }
 
 function thumb(s: StoryRec, cls: string) {
-  const img = h('img', { class: cls + ' bg-zinc-200 object-cover', alt: '' });
-  const path = coverPath(s.data.cover);
-  if (path) {
-    const cached = thumbCache.get(path);
-    if (cached) img.src = cached;
-    else
-      b.readBlob(path).then((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        thumbCache.set(path, url);
-        img.src = url;
-      });
-  }
-  return img;
+  return h('img', { class: cls + ' bg-zinc-200 object-cover', alt: '', src: coverThumb(s.data.cover), loading: 'lazy' });
 }
 
 function field(label: string, control: HTMLElement, hint?: Child) {
@@ -282,11 +270,9 @@ function listView() {
     h(
       'p',
       { class: 'mt-6 text-xs text-zinc-500' },
-      `${b.label}. `,
-      h('button', { type: 'button', class: 'text-accent underline', onclick: () => disconnectAndReload(b) }, b.kind === 'server' ? 'Đăng xuất' : 'Đổi kết nối'),
-      b.kind === 'local'
-        ? ' · Thay đổi được ghi thẳng vào thư mục dự án; dùng git push để đưa lên site.'
-        : ' · Lưu xong, bấm "🚀 Đăng lên site" trên thanh trên cùng để site cập nhật (1–2 phút). Nếu quên, site tự đăng mỗi ngày.',
+      `Đăng nhập: ${user.email}. `,
+      h('button', { type: 'button', class: 'text-accent underline', onclick: logout }, 'Đăng xuất'),
+      ' · Lưu xong là site cập nhật ngay. Truyện hẹn giờ tự hiện khi tới ngày đăng.',
     ),
   );
   renderTabs();
@@ -300,7 +286,7 @@ async function confirmDeleteStory(s: StoryRec) {
   if (typed === null) return;
   if (typed.trim() !== s.slug) return toast('Slug không khớp, chưa xoá gì.', false);
   try {
-    await deleteStory(b, s, stories);
+    await deleteStory(s);
     await reload();
     toast('Đã xoá truyện.');
     if (location.hash === '' || location.hash === '#/') route();
@@ -314,7 +300,7 @@ async function confirmDeleteStory(s: StoryRec) {
 
 async function storyView(s: StoryRec) {
   show(pageBar({ crumbs: [['Truyện', '#/']], title: s.data.title }), h('p', { class: 'text-sm text-zinc-500' }, 'Đang tải chương…'));
-  const chapters = await loadChapters(b, s.slug);
+  const chapters = await loadChapters(s.slug);
   counts.set(s.slug, chapters.length);
 
   const numbers = chapters.map((c) => Number(c.data.number));
@@ -425,7 +411,7 @@ async function storyView(s: StoryRec) {
                       onclick: async () => {
                         if (!confirm(`Xoá chương ${c.data.number}: "${c.data.title}"?`)) return;
                         try {
-                          await deleteChapter(b, s.slug, c);
+                          await deleteChapter(c);
                           toast('Đã xoá chương.');
                           storyView(s);
                         } catch (e) {
@@ -501,7 +487,7 @@ function storyEdit(s: StoryRec) {
         const genres = genreBoxes.filter((x) => x.checked).map((x) => x.value);
         if (!genres.length) return toast('Chọn ít nhất 1 thể loại.', false);
         busy(save, 'Đang lưu…', async () => {
-          const data: Record<string, any> = {
+          const data: StoryRec['data'] = {
             ...d,
             title: title.value.trim(),
             description: description.value.trim(),
@@ -511,13 +497,13 @@ function storyEdit(s: StoryRec) {
             author: author.value,
             publishDate: publishDate.value,
             updatedDate: today(),
-            status: status.value,
+            status: status.value === 'ongoing' ? 'ongoing' : 'completed',
             featured: featured.checked,
             draft: draft.checked,
             seoTitle: seoTitle.value.trim(),
             seoDescription: seoDescription.value.trim(),
           };
-          await saveStory(b, { ...s, data, body: summary.value }, newCover, stories);
+          await saveStory({ ...s, data, body: summary.value }, newCover);
           dirty = false;
           await reload();
           toast('Đã lưu truyện.');
@@ -575,14 +561,14 @@ function storyEdit(s: StoryRec) {
 
 // ------------------------------------------------------------ Sửa / thêm 1 chương
 
-async function chapterEdit(s: StoryRec, file: string | undefined) {
-  const chapters = await loadChapters(b, s.slug);
-  const isNew = file === 'new';
+async function chapterEdit(s: StoryRec, id: string | undefined) {
+  const chapters = await loadChapters(s.slug);
+  const isNew = id === 'new';
   const nextNumber = chapters.length ? Math.max(...chapters.map((c) => Number(c.data.number))) + 1 : 1;
-  const existing = chapters.find((c) => c.file === file);
+  const existing = chapters.find((c) => String(c.id) === id);
   if (!isNew && !existing) return show(pageBar({ crumbs: [['Truyện', '#/'], [s.data.title, storyHash(s)]], title: 'Không tìm thấy chương' }));
 
-  const ch: ChapterRec = existing ?? { file: chapterFileName(nextNumber), data: { story: s.slug, number: nextNumber, title: '' }, body: '' };
+  const ch: ChapterRec = existing ?? { data: { number: nextNumber, title: '', draft: false, seoDescription: '' }, body: '' };
   const idx = existing ? chapters.indexOf(existing) : -1;
   const prev = idx > 0 ? chapters[idx - 1] : undefined;
   const next = idx >= 0 ? chapters[idx + 1] : undefined;
@@ -618,13 +604,8 @@ async function chapterEdit(s: StoryRec, file: string | undefined) {
         const n = Number(number.value);
         if (chapters.some((c) => c !== existing && Number(c.data.number) === n)) return toast(`Đã có chương số ${n}.`, false);
         busy(save, 'Đang lưu…', async () => {
-          let fileName = ch.file;
-          if (isNew) {
-            fileName = chapterFileName(n);
-            if (chapters.some((c) => c.file === fileName)) fileName = fileName.replace(/\.md$/, `-${Date.now().toString(36)}.md`);
-          }
           const text = body.value.replace(/\r\n?/g, '\n').trim();
-          await saveChapter(b, s.slug, { file: fileName, data: { ...ch.data, number: n, title: title.value.trim(), draft: draft.checked, seoDescription: seo.value.trim() }, body: text });
+          await saveChapter(s.slug, { id: ch.id, data: { ...ch.data, number: n, title: title.value.trim(), draft: draft.checked, seoDescription: seo.value.trim() }, body: text });
           dirty = false;
           if (isNew) {
             toast(`Đã tạo chương ${n}.`);
@@ -666,7 +647,7 @@ async function chapterEdit(s: StoryRec, file: string | undefined) {
               onclick: async () => {
                 if (!confirm(`Xoá chương ${ch.data.number}?`)) return;
                 try {
-                  await deleteChapter(b, s.slug, ch);
+                  await deleteChapter(existing!);
                   dirty = false;
                   toast('Đã xoá chương.');
                   go(storyHash(s));
@@ -698,7 +679,7 @@ async function chapterEdit(s: StoryRec, file: string | undefined) {
 // ------------------------------------------------------------ Dán thêm nhiều chương
 
 async function bulkAdd(s: StoryRec) {
-  const chapters = await loadChapters(b, s.slug);
+  const chapters = await loadChapters(s.slug);
   const start = chapters.length ? Math.max(...chapters.map((c) => Number(c.data.number))) + 1 : 1;
   let parsed: { number: number; title: string; body: string }[] = [];
 
@@ -735,18 +716,9 @@ async function bulkAdd(s: StoryRec) {
 
   save.addEventListener('click', () =>
     busy(save, 'Đang lưu…', async () => {
-      const pad = start + parsed.length > 99 ? 3 : 2;
-      const taken = new Set(chapters.map((c) => c.file));
-      const fileFor = (n: number) => {
-        const name = `chapter-${String(n).padStart(pad, '0')}.md`;
-        return taken.has(name) ? name.replace(/\.md$/, `-${Date.now().toString(36)}.md`) : name;
-      };
-      await b.apply(
-        parsed.map((c) => ({
-          path: `src/content/chapters/${s.slug}/${fileFor(c.number)}`,
-          content: `---\nstory: ${s.slug}\nnumber: ${c.number}\ntitle: ${JSON.stringify(c.title)}\n---\n\n${c.body}\n`,
-        })),
-        `content: add ${parsed.length} chapters to "${s.slug}"`,
+      await addChapters(
+        s.slug,
+        parsed.map((c) => ({ data: { number: c.number, title: c.title, draft: false, seoDescription: '' }, body: c.body })),
       );
       dirty = false;
       toast(`Đã thêm ${parsed.length} chương.`);

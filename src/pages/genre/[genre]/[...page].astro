@@ -1,32 +1,26 @@
 ---
-import type { GetStaticPaths } from 'astro';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import StoryGrid from '../../../components/StoryGrid.astro';
 import Breadcrumbs from '../../../components/Breadcrumbs.astro';
 import { SITE } from '../../../site.config';
-import { GENRES, getStories } from '../../../lib/content';
+import { GENRES, genreUrl, getStories } from '../../../lib/content';
+import { paginate } from '../../../lib/paginate';
 
-export const getStaticPaths = (async ({ paginate }) => {
-  const stories = await getStories();
-  return GENRES.flatMap((genre) =>
-    paginate(
-      stories.filter((s) => s.data.genres.includes(genre.id)),
-      { params: { genre: genre.id }, props: { genre }, pageSize: SITE.storiesPerPage },
-    ),
-  );
-}) satisfies GetStaticPaths;
-
-const { page, genre } = Astro.props;
+const genre = GENRES.find((g) => g.id === Astro.params.genre);
+const stories = genre ? (await getStories()).filter((s) => s.data.genres.includes(genre.id)) : [];
+// /genre/x/ = trang 1, /genre/x/2/ = trang 2...
+const page = genre && paginate(stories, Astro.params.page ?? '1', SITE.storiesPerPage, (n) => (n === 1 ? genreUrl(genre.id) : `${genreUrl(genre.id)}${n}/`));
+if (!genre || !page || Astro.params.page === '1') return Astro.rewrite('/404/');
 const suffix = page.currentPage > 1 ? ` – Page ${page.currentPage}` : '';
 ---
 
 <BaseLayout
   title={`${genre.name} Stories${suffix} | ${SITE.name}`}
   description={genre.description}
-  prev={page.url.prev}
-  next={page.url.next}
+  prev={page.prev}
+  next={page.next}
   noindex={page.total === 0}
 >
   <Breadcrumbs jsonOnly items={[{ name: 'Genres', href: '/genres/' }, { name: genre.name }]} />
-  <StoryGrid heading={`${genre.name}${suffix}`} subheading={genre.description} stories={page.data} prev={page.url.prev} next={page.url.next} />
+  <StoryGrid heading={`${genre.name}${suffix}`} subheading={genre.description} stories={page.data} prev={page.prev} next={page.next} />
 </BaseLayout>

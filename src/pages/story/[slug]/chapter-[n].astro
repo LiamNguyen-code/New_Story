@@ -1,7 +1,6 @@
 ---
-import type { GetStaticPaths } from 'astro';
-import { Image } from 'astro:assets';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Cover from '../../../components/Cover.astro';
 import Breadcrumbs from '../../../components/Breadcrumbs.astro';
 import CrumbBar from '../../../components/CrumbBar.astro';
 import ShareButtons from '../../../components/ShareButtons.astro';
@@ -16,33 +15,22 @@ import {
   excerpt,
   genreName,
   genreUrl,
-  getChaptersByStory,
+  getChapterBody,
+  getChapters,
   getStories,
+  getStory,
+  ogImageUrl,
+  renderMarkdown,
   storyUrl,
-  type Chapter,
-  type Story,
 } from '../../../lib/content';
-import { ogImage } from '../../../lib/og';
 
-export const getStaticPaths = (async () => {
-  const stories = await getStories();
-  const byStory = await getChaptersByStory();
-  return stories.flatMap((story) => {
-    const chapters = byStory.get(story.id) ?? [];
-    return chapters.map((chapter, i) => ({
-      params: { slug: story.id, n: String(chapter.data.number) },
-      props: { story, chapter, chapters, index: i, stories },
-    }));
-  });
-}) satisfies GetStaticPaths;
+const story = await getStory(Astro.params.slug ?? '');
+const chapters = story ? await getChapters(story) : [];
+const index = chapters.findIndex((c) => String(c.data.number) === Astro.params.n);
+if (!story || index < 0) return Astro.rewrite('/404/');
 
-const { story, chapter, chapters, index, stories } = Astro.props as {
-  story: Story;
-  chapter: Chapter;
-  chapters: Chapter[];
-  index: number;
-  stories: Story[];
-};
+const chapter = chapters[index];
+const [body, stories] = await Promise.all([getChapterBody(chapter), getStories()]);
 const n = chapter.data.number;
 const total = chapters.length;
 const prev = chapters[index - 1];
@@ -51,7 +39,7 @@ const prevUrl = prev && chapterUrl(story.id, prev.data.number);
 const nextUrl = next && chapterUrl(story.id, next.data.number);
 
 // Tách nội dung: [phần 1] Ad [phần 2] "May you like" [2 đoạn cuối]
-const paras = (chapter.rendered?.html ?? '').split('</p>').filter((p) => p.trim());
+const paras = renderMarkdown(body).split('</p>').filter((p) => p.trim());
 const join = (list: string[]) => list.map((p) => p + '</p>').join('');
 const adAt = SITE.inContentAdAfterParagraph;
 const likeAt = Math.max(adAt + 3, paras.length - 2);
@@ -71,9 +59,9 @@ const related = [...chapters.slice(index + 1), ...chapters.slice(0, index)].slic
 const heading = `Chapter ${n} - ${chapter.data.title}`;
 const baseTitle = `${story.data.seoTitle ?? story.data.title} – Chapter ${n}`;
 const seoTitle = baseTitle.length + SITE.name.length + 3 <= 65 ? `${baseTitle} | ${SITE.name}` : baseTitle;
-const description = chapter.data.seoDescription ?? excerpt(chapter.body ?? '');
+const description = chapter.data.seoDescription ?? excerpt(body);
 const url = new URL(chapterUrl(story.id, n), SITE.url).href;
-const og = await ogImage(story.data.cover);
+const og = ogImageUrl(story.data.cover);
 
 const chapterLd = {
   '@context': 'https://schema.org',
@@ -87,7 +75,7 @@ const chapterLd = {
   inLanguage: SITE.lang,
   datePublished: story.data.publishDate.toISOString(),
   dateModified: (story.data.updatedDate ?? story.data.publishDate).toISOString(),
-  wordCount: (chapter.body ?? '').split(/\s+/).length,
+  wordCount: chapter.wordCount,
   isAccessibleForFree: true,
   isPartOf: {
     '@type': 'Book',
@@ -126,10 +114,10 @@ const chapterLd = {
 
       <h1 class="mt-6 text-[28px] font-bold leading-[1.15] tracking-tight text-slate-900 sm:text-[42px] xl:text-[54px]">{heading}</h1>
 
-      <Image
-        src={story.data.cover}
+      <Cover
+        name={story.data.cover}
         alt={story.data.coverAlt ?? story.data.title}
-        widths={[480, 760, 1200]}
+        widths={[480, 800, 1200]}
         sizes="(min-width: 1280px) 760px, 100vw"
         loading="eager"
         fetchpriority="high"

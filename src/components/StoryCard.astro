@@ -1,5 +1,5 @@
 ---
-import { Image } from 'astro:assets';
+import Cover from './Cover.astro';
 import { formatDate, storyUrl, type Story } from '../lib/content';
 
 interface Props {
@@ -18,10 +18,10 @@ const date = formatDate(data.publishDate);
   variant === 'grid' && (
     <article class="flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white">
       <a href={href} class="block h-[190px] overflow-hidden bg-zinc-100" tabindex="-1" aria-hidden="true">
-        <Image
-          src={data.cover}
+        <Cover
+          name={data.cover}
           alt=""
-          widths={[400, 800]}
+          widths={[480, 800]}
           sizes="(min-width: 1024px) 390px, (min-width: 640px) 50vw, 100vw"
           loading={eager ? 'eager' : 'lazy'}
           fetchpriority={eager ? 'high' : 'auto'}
@@ -46,7 +46,7 @@ const date = formatDate(data.publishDate);
   variant === 'small' && (
     <article class="overflow-hidden rounded-xl border border-zinc-200 bg-white">
       <a href={href} class="block h-[88px] overflow-hidden bg-zinc-100 sm:h-[100px]" tabindex="-1" aria-hidden="true">
-        <Image src={data.cover} alt="" widths={[300, 500]} sizes="(min-width: 768px) 230px, 50vw" class="h-full w-full object-cover" />
+        <Cover name={data.cover} alt="" widths={[240, 480]} sizes="(min-width: 768px) 230px, 50vw" class="h-full w-full object-cover" />
       </a>
       <div class="p-2.5 pb-4">
         <time class="text-[9px] uppercase tracking-wide text-zinc-500" datetime={data.publishDate.toISOString()}>{date}</time>
@@ -62,7 +62,7 @@ const date = formatDate(data.publishDate);
   variant === 'mini' && (
     <a href={href} class="block overflow-hidden rounded-xl border border-zinc-200 bg-white hover:shadow-sm">
       <div class="flex h-[140px] items-center justify-center bg-slate-50">
-        <Image src={data.cover} alt="" widths={[300, 500]} sizes="250px" class="h-full w-full object-cover" />
+        <Cover name={data.cover} alt="" widths={[240, 480]} sizes="250px" class="h-full w-full object-cover" />
       </div>
       <p class="line-clamp-2 px-2.5 py-2.5 text-[12px] font-medium leading-snug text-slate-900">{data.title}</p>
     </a>

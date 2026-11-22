@@ -1,25 +1,13 @@
 ---
-import type { GetStaticPaths } from 'astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import StoryGrid from '../../components/StoryGrid.astro';
 import { SITE } from '../../site.config';
-import { getStories, slugify, type Story } from '../../lib/content';
+import { getStories, slugify } from '../../lib/content';
 
-export const getStaticPaths = (async () => {
-  const stories = await getStories();
-  const tags = new Map<string, { name: string; stories: Story[] }>();
-  for (const s of stories) {
-    for (const t of s.data.tags) {
-      const key = slugify(t);
-      const entry = tags.get(key) ?? { name: t, stories: [] };
-      entry.stories.push(s);
-      tags.set(key, entry);
-    }
-  }
-  return [...tags].map(([tag, v]) => ({ params: { tag }, props: v }));
-}) satisfies GetStaticPaths;
-
-const { name, stories } = Astro.props;
+const key = Astro.params.tag ?? '';
+const stories = (await getStories()).filter((s) => s.data.tags.some((t) => slugify(t) === key));
+if (!stories.length) return Astro.rewrite('/404/');
+const name = stories[0].data.tags.find((t) => slugify(t) === key)!;
 ---
 
 <BaseLayout

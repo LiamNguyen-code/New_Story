@@ -1,0 +1,20 @@
+[Unit]
+Description=Story site (Astro + SQLite)
+After=network.target
+
+[Service]
+Type=simple
+User=story
+WorkingDirectory=/opt/story
+EnvironmentFile=/etc/story.env
+ExecStart=/usr/bin/node /opt/story/dist/server/entry.mjs
+Restart=always
+RestartSec=3
+# Hạn chế quyền: chỉ được ghi vào thư mục dữ liệu
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/story
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
