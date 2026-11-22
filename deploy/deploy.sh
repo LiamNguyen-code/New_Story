@@ -12,7 +12,10 @@ set +a
 if [[ " $* " != *" --no-pull "* ]]; then
   git pull --ff-only
 fi
-npm ci --no-audit --no-fund
+# --include=dev: cần tsx cho lệnh user:create / db:import (NODE_ENV=production sẽ bỏ qua gói dev).
+# --ignore-scripts: tránh lỗi thứ tự cài của npm với các bản esbuild lồng nhau; chỉ better-sqlite3 cần script cài.
+npm ci --no-audit --no-fund --include=dev --ignore-scripts
+npm rebuild better-sqlite3
 npm run build
 if [[ " $* " != *" --no-restart "* ]]; then
   sudo /usr/bin/systemctl restart story

@@ -33,7 +33,7 @@
     "@astrojs/check": "^0.9.12",
     "@types/better-sqlite3": "^9.6.0",
     "drizzle-kit": "^0.31.11",
-    "tsx": "^4.23.15",
+    "tsx": "~4.21.1",
     "typescript": "^5.9.3"
   },
   "private": true
