@@ -13,6 +13,8 @@ const { stories: S, chapters: C, authors: A, users: U } = schema;
 export interface StoryDTO {
   slug: string;
   chapterCount: number;
+  /** Tài khoản phụ trách truyện (người đăng) */
+  ownerId: number | null;
   /** Tóm tắt (markdown) */
   body: string;
   data: {
@@ -42,6 +44,7 @@ export interface ChapterDTO {
 const toDTO = (r: typeof S.$inferSelect, chapterCount: number): StoryDTO => ({
   slug: r.slug,
   chapterCount,
+  ownerId: r.ownerId,
   body: r.summary,
   data: {
     title: r.title,
@@ -160,7 +163,7 @@ async function readCover(file: File | null) {
  * Tạo truyện mới (kèm các chương nếu có). overwrite = true: ghi đè truyện cùng slug, xoá chương cũ.
  * Truyện không có chương nào được lưu dạng nháp để không hiện trang trống trên site.
  */
-export async function createStory(input: Record<string, any>, coverFile: File | null) {
+export async function createStory(input: Record<string, any>, coverFile: File | null, user: User) {
   const slug = str(input.slug, 100);
   if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) throw new InputError('Slug chỉ gồm chữ thường a-z, số và dấu gạch ngang.');
   const values = storyValues(input);
@@ -176,11 +179,12 @@ export async function createStory(input: Record<string, any>, coverFile: File | 
     db.transaction((tx) => {
       let id: number;
       if (existing) {
+        // Ghi đè giữ nguyên người phụ trách cũ
         tx.update(S).set({ ...values, cover: coverName, updatedDate: today(), updatedAt: new Date() }).where(eq(S.id, existing.id)).run();
         tx.delete(C).where(eq(C.storyId, existing.id)).run();
         id = existing.id;
       } else {
-        id = tx.insert(S).values({ ...values, slug, cover: coverName }).returning({ id: S.id }).get().id;
+        id = tx.insert(S).values({ ...values, slug, cover: coverName, ownerId: user.id }).returning({ id: S.id }).get().id;
       }
       if (chapters.length) tx.insert(C).values(chapters.map((c: ReturnType<typeof chapterValues>) => ({ ...c, storyId: id }))).run();
     });
@@ -192,13 +196,19 @@ export async function createStory(input: Record<string, any>, coverFile: File | 
   return slug;
 }
 
-export async function updateStory(slug: string, input: Record<string, any>, coverFile: File | null) {
+export async function updateStory(slug: string, input: Record<string, any>, coverFile: File | null, user: User) {
   const story = findStory(slug);
   const values = storyValues(input);
+  // Chỉ admin đổi được người phụ trách
+  let ownerId = story.ownerId;
+  if (user.role === 'admin' && 'ownerId' in input) {
+    ownerId = input.ownerId === null ? null : Number(input.ownerId);
+    if (ownerId !== null && !db.select({ id: U.id }).from(U).where(eq(U.id, ownerId)).get()) throw new InputError('Người phụ trách không tồn tại.');
+  }
   const cover = await readCover(coverFile);
   const coverName = cover ? await saveCover(cover, slug) : story.cover;
   db.update(S)
-    .set({ ...values, cover: coverName, updatedDate: today(), updatedAt: new Date() })
+    .set({ ...values, ownerId, cover: coverName, updatedDate: today(), updatedAt: new Date() })
     .where(eq(S.id, story.id))
     .run();
   if (cover) await deleteCover(story.cover);
@@ -302,7 +312,11 @@ export function deleteUser(id: number) {
   const user = db.select().from(U).where(eq(U.id, id)).get();
   if (!user) throw new InputError('Không tìm thấy tài khoản.', 404);
   if (user.role === 'admin') assertNotLastAdmin(id);
-  db.delete(U).where(eq(U.id, id)).run();
+  db.transaction((tx) => {
+    // Truyện của người này thành "chưa gán" (lượt xem cũ vẫn ghi tên họ trong báo cáo)
+    tx.update(S).set({ ownerId: null }).where(eq(S.ownerId, id)).run();
+    tx.delete(U).where(eq(U.id, id)).run();
+  });
 }
 
 function assertNotLastAdmin(id: number) {

@@ -4,10 +4,10 @@ import { deleteStory, updateStory } from '../../../../../lib/server/admin';
 import { handle, ok } from '../../../../../lib/server/http';
 import { readForm } from '../_form';
 
-export const PUT: APIRoute = ({ params, request }) =>
+export const PUT: APIRoute = ({ params, request, locals }) =>
   handle(async () => {
     const { data, cover } = await readForm(request);
-    await updateStory(params.slug!, data, cover);
+    await updateStory(params.slug!, data, cover, locals.user!);
     return ok({});
   });
 

@@ -1,7 +1,7 @@
 // Cấu trúc database SQLite (Drizzle ORM).
 // Sửa file này rồi chạy `npm run db:generate` để tạo migration mới trong thư mục drizzle/.
 import { sql } from 'drizzle-orm';
-import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 const timestamps = {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
@@ -29,6 +29,8 @@ export const stories = sqliteTable(
     genres: text('genres', { mode: 'json' }).$type<string[]>().notNull().default([]),
     tags: text('tags', { mode: 'json' }).$type<string[]>().notNull().default([]),
     authorId: text('author_id').references(() => authors.id, { onDelete: 'set null' }),
+    /** Người đăng/phụ trách truyện (tài khoản admin) — dùng cho báo cáo lượt xem */
+    ownerId: integer('owner_id').references(() => users.id, { onDelete: 'set null' }),
     /** YYYY-MM-DD. Ngày trong tương lai = hẹn giờ đăng */
     publishDate: text('publish_date').notNull(),
     updatedDate: text('updated_date'),
@@ -70,6 +72,26 @@ export const users = sqliteTable('users', {
   role: text('role', { enum: ['admin', 'editor'] }).notNull().default('editor'),
   ...timestamps,
 });
+
+/**
+ * Lượt xem gộp theo ngày (giờ Việt Nam) × trang. chapter = 0 là trang giới thiệu truyện.
+ * owner_id lưu người phụ trách tại thời điểm xem: đổi người phụ trách không làm dời số liệu cũ.
+ */
+export const pageViews = sqliteTable(
+  'page_views',
+  {
+    day: text('day').notNull(),
+    storyId: integer('story_id')
+      .notNull()
+      .references(() => stories.id, { onDelete: 'cascade' }),
+    chapter: integer('chapter').notNull(),
+    ownerId: integer('owner_id').notNull().default(0),
+    views: integer('views').notNull().default(0),
+    /** Người đọc khác nhau trong ngày (mỗi trình duyệt tính 1 lần/trang/ngày) */
+    uniques: integer('uniques').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.storyId, t.chapter, t.ownerId] }), index('page_views_day_idx').on(t.day)],
+);
 
 export const sessions = sqliteTable('sessions', {
   /** sha256 của token trong cookie (lộ DB cũng không dùng được token) */

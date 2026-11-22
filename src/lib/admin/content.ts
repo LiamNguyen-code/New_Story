@@ -43,7 +43,14 @@ function form(data: unknown, cover?: Blob | null) {
 }
 
 export const loadData = () =>
-  api<{ user: AdminUser; stories: StoryRec[]; authors: { id: string; name: string }[]; genres: Settings['genres'] }>('admin/data');
+  api<{
+    user: AdminUser;
+    stories: StoryRec[];
+    authors: { id: string; name: string }[];
+    genres: Settings['genres'];
+    /** Chỉ có khi đăng nhập bằng admin */
+    users: { id: number; name: string; email: string }[];
+  }>('admin/data');
 
 export async function loadChapters(slug: string): Promise<ChapterDTO[]> {
   return (await api<{ chapters: ChapterDTO[] }>(`admin/stories/${encodeURIComponent(slug)}/chapters`)).chapters;
@@ -60,7 +67,7 @@ export interface NewStory {
 export const createStory = (story: NewStory, cover: Blob) => api('admin/stories', { method: 'POST', body: form(story, cover) });
 
 export const saveStory = (story: StoryRec, cover?: Blob | null) =>
-  api(`admin/stories/${encodeURIComponent(story.slug)}`, { method: 'PUT', body: form({ data: story.data, body: story.body }, cover) });
+  api(`admin/stories/${encodeURIComponent(story.slug)}`, { method: 'PUT', body: form({ data: story.data, body: story.body, ownerId: story.ownerId }, cover) });
 
 export const deleteStory = (story: StoryRec) => api(`admin/stories/${encodeURIComponent(story.slug)}`, { method: 'DELETE' });
 

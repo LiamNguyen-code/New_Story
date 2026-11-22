@@ -1,0 +1,43 @@
+---
+// Đếm lượt xem: chỉ gửi khi trang hiển thị ≥ 3 giây (bỏ qua bot không chạy JS và người bấm nhầm).
+interface Props {
+  slug: string;
+  /** 0 = trang giới thiệu truyện */
+  chapter: number;
+}
+const { slug, chapter } = Astro.props;
+---
+
+<script is:inline define:vars={{ slug, chapter }}>
+  (function () {
+    let sent = false;
+    let timer = 0;
+    const send = () => {
+      if (sent) return;
+      sent = true;
+      // Lần đầu trong ngày mở trang này trên trình duyệt này = 1 người đọc
+      let unique = 1;
+      try {
+        const key = 'pv-' + new Date().toLocaleDateString('en-CA');
+        const seen = JSON.parse(localStorage.getItem(key) || '[]');
+        const id = slug + ':' + chapter;
+        if (seen.includes(id)) unique = 0;
+        else {
+          seen.push(id);
+          for (const k of Object.keys(localStorage)) if (k.startsWith('pv-') && k !== key) localStorage.removeItem(k);
+          localStorage.setItem(key, JSON.stringify(seen.slice(-500)));
+        }
+      } catch (e) {}
+      const body = JSON.stringify({ s: slug, c: chapter, u: unique });
+      if (!(navigator.sendBeacon && navigator.sendBeacon('/api/track/', new Blob([body], { type: 'application/json' })))) {
+        fetch('/api/track/', { method: 'POST', body, headers: { 'Content-Type': 'application/json' }, keepalive: true }).catch(() => {});
+      }
+    };
+    const arm = () => {
+      clearTimeout(timer);
+      if (document.visibilityState === 'visible') timer = setTimeout(send, 3000);
+    };
+    document.addEventListener('visibilitychange', arm);
+    arm();
+  })();
+</script>

@@ -8,6 +8,7 @@ import AdSlot from '../../../components/AdSlot.astro';
 import ChapterToc from '../../../components/ChapterToc.astro';
 import RelatedChapters from '../../../components/RelatedChapters.astro';
 import OtherPosts from '../../../components/OtherPosts.astro';
+import ViewTracker from '../../../components/ViewTracker.astro';
 import { SITE } from '../../../site.config';
 import {
   chapterUrl,
@@ -148,6 +149,7 @@ const bookLd = {
   </div>
 
   <OtherPosts stories={otherPosts} />
+  <ViewTracker slug={story.id} chapter={0} />
 </BaseLayout>
 
 <script>

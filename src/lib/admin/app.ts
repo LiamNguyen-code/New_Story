@@ -31,6 +31,7 @@ let stories: StoryRec[] = [];
 let counts = new Map<string, number>();
 let settings: Settings = { genres: [] };
 let authors: { id: string; name: string }[] = [];
+let users: { id: number; name: string; email: string }[] = [];
 let dirty = false;
 let skipNextRoute = false;
 const listState = { q: '', filter: 'all' };
@@ -64,7 +65,7 @@ export async function startApp(el: HTMLElement) {
 
 async function reload() {
   const data = await loadData();
-  ({ user, stories, authors } = data);
+  ({ user, stories, authors, users } = data);
   settings = { genres: data.genres };
   counts = new Map(stories.map((s) => [s.slug, s.chapterCount]));
 }
@@ -88,6 +89,12 @@ const chapterHash = (s: StoryRec, c: ChapterRec) => `${storyHash(s)}/chapter/${c
 const show = (...nodes: (Node | false | null | undefined)[]) => root.replaceChildren(...nodes.filter((n): n is Node => !!n));
 const today = () => new Date().toISOString().slice(0, 10);
 const genreName = (id: string) => settings.genres.find((g) => g.id === id)?.name ?? id;
+const ownerName = (id: number | null) => {
+  if (id === null) return 'Chưa gán';
+  if (id === user.id) return user.name || user.email;
+  const u = users.find((x) => x.id === id);
+  return u ? u.name || u.email : `#${id}`;
+};
 
 // ------------------------------------------------------------ helpers
 
@@ -235,6 +242,7 @@ function listView() {
               h('span', {}, `${counts.get(s.slug) ?? 0} chương`),
               h('span', { class: 'hidden sm:inline' }, `· ${dateOnly(s.data.publishDate)}`),
               h('span', { class: 'hidden md:inline' }, `· ${(s.data.genres ?? []).map(genreName).join(', ')}`),
+              user.role === 'admin' && h('span', { class: 'hidden lg:inline' }, `· 👤 ${ownerName(s.ownerId)}`),
             ),
           ),
           h(
@@ -345,6 +353,8 @@ async function storyView(s: StoryRec) {
           h('dt', { class: 'text-zinc-500' }, 'Thể loại'),
           h('dd', { class: 'text-zinc-700' }, (s.data.genres ?? []).map(genreName).join(', ')),
           (s.data.tags ?? []).length > 0 && [h('dt', { class: 'text-zinc-500' }, 'Tag'), h('dd', { class: 'text-zinc-700' }, s.data.tags.join(', '))],
+          h('dt', { class: 'text-zinc-500' }, 'Phụ trách'),
+          h('dd', { class: 'text-zinc-700' }, ownerName(s.ownerId)),
           h('dt', { class: 'text-zinc-500' }, 'Độ dài'),
           h('dd', { class: 'text-zinc-700' }, `${chapters.length} chương · ${totalWords.toLocaleString()} chữ`),
         ),
@@ -461,6 +471,15 @@ function storyEdit(s: StoryRec) {
   const seoDescription = area(d.seoDescription, 2, { maxLength: 170 });
   const status = h('select', { class: input, onchange: markDirty }, h('option', { value: 'completed', selected: d.status !== 'ongoing' }, 'Hoàn thành'), h('option', { value: 'ongoing', selected: d.status === 'ongoing' }, 'Đang ra'));
   const author = h('select', { class: input, onchange: markDirty }, authors.map((a) => h('option', { value: a.id, selected: a.id === d.author }, a.name)));
+  // Người phụ trách (tính lượt xem cho ai) — chỉ admin đổi được
+  const owner =
+    user.role === 'admin' &&
+    h(
+      'select',
+      { class: input, onchange: markDirty },
+      h('option', { value: '', selected: s.ownerId === null }, '— Chưa gán —'),
+      users.map((u) => h('option', { value: String(u.id), selected: u.id === s.ownerId }, u.name ? `${u.name} (${u.email})` : u.email)),
+    );
   const featured = h('input', { type: 'checkbox', class: 'h-4 w-4', checked: !!d.featured, onchange: markDirty });
   const draft = h('input', { type: 'checkbox', class: 'h-4 w-4', checked: !!d.draft, onchange: markDirty });
   const genreBoxes = settings.genres.map((g) => h('input', { type: 'checkbox', class: 'h-4 w-4', value: g.id, checked: (d.genres ?? []).includes(g.id), onchange: markDirty }));
@@ -503,7 +522,7 @@ function storyEdit(s: StoryRec) {
             seoTitle: seoTitle.value.trim(),
             seoDescription: seoDescription.value.trim(),
           };
-          await saveStory({ ...s, data, body: summary.value }, newCover);
+          await saveStory({ ...s, ownerId: owner ? (owner.value ? Number(owner.value) : null) : s.ownerId, data, body: summary.value }, newCover);
           dirty = false;
           await reload();
           toast('Đã lưu truyện.');
@@ -545,7 +564,8 @@ function storyEdit(s: StoryRec) {
       card(
         h('fieldset', {}, h('legend', { class: 'text-sm font-medium' }, 'Thể loại *'), genreBoxes.map((box, i) => h('label', { class: 'mt-2 flex items-center gap-2 text-sm' }, box, settings.genres[i].name))),
         field('Tag', tags, 'Phân cách bằng dấu phẩy.'),
-        field('Tác giả', author),
+        field('Tác giả', author, 'Tên hiển thị trên site.'),
+        owner && field('Người phụ trách', owner, 'Lượt xem của truyện được tính cho người này trong Báo cáo.'),
       ),
     ),
   );
