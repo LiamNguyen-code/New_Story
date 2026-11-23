@@ -1,27 +1,20 @@
 ---
-// Tin tức là file markdown → build sẵn thành HTML tĩnh
-export const prerender = true;
-import type { GetStaticPaths } from 'astro';
-import { Image } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import Cover from '../../components/Cover.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import ShareButtons from '../../components/ShareButtons.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import NewsCard from '../../components/NewsCard.astro';
 import { SITE } from '../../site.config';
-import { excerpt, formatLongDate, getNews, newsUrl, type News } from '../../lib/content';
-import { ogImage } from '../../lib/og';
+import { excerpt, formatLongDate, getAuthorName, getNews, getNewsItem, newsUrl, ogImageUrl, renderMarkdown } from '../../lib/content';
 
-export const getStaticPaths = (async () => {
-  const all = await getNews();
-  return all.map((item) => ({ params: { slug: item.id }, props: { item, all } }));
-}) satisfies GetStaticPaths;
-
-const { item, all } = Astro.props as { item: News; all: News[] };
+const item = await getNewsItem(Astro.params.slug ?? '');
+if (!item) return Astro.rewrite('/404/');
+const all = await getNews();
 const { data } = item;
 
 // Chèn quảng cáo giữa bài sau đoạn văn thứ N
-const html = item.rendered?.html ?? '';
+const html = renderMarkdown(item.body);
 const parts = html.split('</p>');
 const after = SITE.inContentAdAfterParagraph;
 const hasAd = parts.length > after + 3;
@@ -29,10 +22,11 @@ const first = hasAd ? parts.slice(0, after).join('</p>') + '</p>' : html;
 const rest = hasAd ? parts.slice(after).join('</p>') : '';
 
 const related = all.filter((n) => n.id !== item.id).slice(0, 6);
+const author = getAuthorName(item.ownerId);
 const description = data.description ?? excerpt(item.body ?? '');
 const title = data.seoTitle ?? (data.title.length + SITE.name.length + 3 <= 65 ? `${data.title} | ${SITE.name}` : data.title);
 const url = new URL(newsUrl(item.id), SITE.url).href;
-const og = await ogImage(data.cover);
+const og = ogImageUrl(data.cover);
 
 const ld = {
   '@context': 'https://schema.org',
@@ -43,7 +37,7 @@ const ld = {
   datePublished: data.publishDate.toISOString(),
   dateModified: (data.updatedDate ?? data.publishDate).toISOString(),
   mainEntityOfPage: url,
-  author: { '@type': 'Organization', name: SITE.name, url: SITE.url },
+  author: author ? { '@type': 'Person', name: author } : { '@type': 'Organization', name: SITE.name, url: SITE.url },
   publisher: { '@type': 'Organization', name: SITE.name, url: SITE.url },
   ...(data.category ? { articleSection: data.category } : {}),
 };
@@ -70,16 +64,16 @@ const ld = {
             d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"></path></svg
         >
         <time datetime={data.publishDate.toISOString()}>Posted {formatLongDate(data.publishDate)}</time>
-        {data.category && <span class="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">{data.category}</span>}
+        {author && <span>· By <strong class="font-semibold text-zinc-700">{author}</strong></span>}
       </p>
     </header>
 
     <AdSlot pos="top" />
 
-    <Image
-      src={data.cover}
+    <Cover
+      name={data.cover}
       alt={data.coverAlt ?? data.title}
-      widths={[480, 750, 1200]}
+      widths={[480, 800, 1200]}
       sizes="(min-width: 782px) 750px, 100vw"
       loading="eager"
       fetchpriority="high"

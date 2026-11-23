@@ -63,6 +63,31 @@ export const chapters = sqliteTable(
   (t) => [uniqueIndex('chapters_story_number_idx').on(t.storyId, t.number)],
 );
 
+export const news = sqliteTable(
+  'news',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    slug: text('slug').notNull().unique(),
+    title: text('title').notNull(),
+    description: text('description'),
+    /** Nội dung markdown (hỗ trợ ## tiêu đề, ảnh, bảng) */
+    body: text('body').notNull(),
+    /** Tên gốc ảnh bìa trong uploads/covers */
+    cover: text('cover').notNull(),
+    coverAlt: text('cover_alt'),
+    category: text('category'),
+    /** Người đăng tin = tác giả hiển thị trên site */
+    ownerId: integer('owner_id').references(() => users.id, { onDelete: 'set null' }),
+    /** YYYY-MM-DD, ngày đăng (tự đặt khi tạo tin) */
+    publishDate: text('publish_date').notNull(),
+    updatedDate: text('updated_date'),
+    draft: integer('draft', { mode: 'boolean' }).notNull().default(false),
+    seoTitle: text('seo_title'),
+    ...timestamps,
+  },
+  (t) => [index('news_publish_idx').on(t.draft, t.publishDate)],
+);
+
 export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   email: text('email').notNull().unique(),

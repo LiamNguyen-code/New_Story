@@ -16,7 +16,7 @@ import {
   formatDate,
   genreName,
   genreUrl,
-  getAuthor,
+  getAuthorName,
   getChapters,
   getStories,
   getStory,
@@ -31,7 +31,8 @@ const story = await getStory(Astro.params.slug ?? '');
 if (!story) return Astro.rewrite('/404/');
 
 const { data } = story;
-const [chapters, author, all] = await Promise.all([getChapters(story), getAuthor(data.author), getStories()]);
+const [chapters, all] = await Promise.all([getChapters(story), getStories()]);
+const author = getAuthorName(story.ownerId, data.author);
 const totalMinutes = chapters.reduce((sum, c) => sum + minutesFromWords(c.wordCount), 0);
 const otherPosts = all.filter((s) => s.id !== story.id).slice(0, 8);
 
@@ -53,7 +54,7 @@ const bookLd = {
   inLanguage: SITE.lang,
   datePublished: data.publishDate.toISOString(),
   dateModified: (data.updatedDate ?? data.publishDate).toISOString(),
-  author: { '@type': 'Person', name: author?.name ?? SITE.name },
+  author: { '@type': 'Person', name: author ?? SITE.name },
   publisher: { '@type': 'Organization', name: SITE.name, url: SITE.url },
   numberOfPages: chapters.length,
   bookFormat: 'https://schema.org/EBook',
@@ -87,7 +88,7 @@ const bookLd = {
       <article data-pagefind-body>
         <h1 class="mt-6 text-[28px] font-bold leading-[1.15] tracking-tight text-slate-900 sm:text-[42px] xl:text-[50px]">{data.title}</h1>
         <p class="mt-4 flex flex-wrap gap-x-3 text-[13px] text-zinc-500" data-pagefind-ignore>
-          {author && <span>By <strong class="font-semibold text-zinc-700">{author.name}</strong></span>}
+          {author && <span>By <strong class="font-semibold text-zinc-700">{author}</strong></span>}
           <time datetime={data.publishDate.toISOString()}>{formatDate(data.publishDate)}</time>
           <span>· ~{totalMinutes} min read</span>
           <span>· {data.status === 'completed' ? 'Completed' : 'Ongoing'}</span>

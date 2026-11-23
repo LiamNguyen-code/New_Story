@@ -1,11 +1,13 @@
 ---
-// Báo cáo lượt xem theo ngày / người phụ trách / truyện / từng trang. Admin xem tất cả, biên tập chỉ thấy truyện của mình.
+// Báo cáo lượt xem theo ngày / người phụ trách / truyện / từng trang. Chỉ admin xem được.
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { listUsers } from '../../lib/server/admin';
 import { parseFilter, report, vnDay } from '../../lib/server/views';
 
 const me = Astro.locals.user!;
-const isAdmin = me.role === 'admin';
+// Báo cáo chỉ dành cho admin
+if (me.role !== 'admin') return Astro.redirect('/admin/');
+const isAdmin = true;
 const filter = parseFilter(Astro.url.searchParams, me);
 const { days, byOwner, byStory, byPage, total } = report(filter);
 const users = isAdmin ? listUsers() : [];

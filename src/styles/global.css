@@ -112,6 +112,47 @@ body {
   vertical-align: top;
 }
 
+/* Trình soạn thảo tin trong admin (giao diện giống .news-body trên site) */
+.rich-editor > :first-child {
+  margin-top: 0;
+}
+.rich-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: #a1a1aa;
+  pointer-events: none;
+}
+.rich-editor th,
+.rich-editor td {
+  position: relative;
+  border: 1px solid #e4e4e7;
+}
+.rich-editor th p,
+.rich-editor td p {
+  margin: 0;
+}
+.rich-editor .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgb(59 130 246 / 0.12);
+  pointer-events: none;
+}
+.rich-editor img.ProseMirror-selectednode {
+  outline: 3px solid #3b82f6;
+}
+.rich-editor li p {
+  margin: 0;
+}
+.rich-editor hr {
+  margin: 1.6em 0;
+  border-color: #e4e4e7;
+}
+.rich-editor hr.ProseMirror-selectednode {
+  border-color: #3b82f6;
+}
+
 /* Khung quảng cáo giữ sẵn chiều cao để không gây CLS */
 .ad-slot {
   min-height: 280px;

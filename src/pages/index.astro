@@ -3,16 +3,16 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import StoryGrid from '../components/StoryGrid.astro';
 import ContinueReading from '../components/ContinueReading.astro';
 import { SITE } from '../site.config';
-import { getStories, sortFeatured } from '../lib/content';
+import { getStories } from '../lib/content';
 
+// Truyện mới đăng nhất lên đầu
 const stories = await getStories();
-// Truyện "featured" lên đầu, còn lại theo ngày mới nhất
-const pageItems = sortFeatured(stories).slice(0, SITE.storiesPerPage);
+const pageItems = stories.slice(0, SITE.storiesPerPage);
 const next = stories.length > SITE.storiesPerPage ? '/page/2/' : undefined;
 ---
 
 <BaseLayout title={`${SITE.name} – ${SITE.tagline}`} description={SITE.description} next={next}>
-  <StoryGrid heading="Recent Stories" subheading={`Latest updates, analysis, and insights from ${SITE.name.toLowerCase()}.`} stories={pageItems} next={next}>
+  <StoryGrid heading="Recent Stories" subheading={`New chapters and complete serial stories from ${SITE.name}, free to read.`} stories={pageItems} next={next}>
     <ContinueReading />
   </StoryGrid>
 </BaseLayout>

@@ -4,7 +4,9 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 // Đã đăng nhập thì vào thẳng trang quản trị
 const next = Astro.url.searchParams.get('next') ?? '';
 const safeNext = next.startsWith('/admin/') ? next : '/admin/';
-if (Astro.locals.user) return Astro.redirect(safeNext);
+// ?logout: đến từ nút "Đăng xuất" → không chuyển hướng, script bên dưới xoá phiên
+const loggingOut = Astro.url.searchParams.has('logout');
+if (Astro.locals.user && !loggingOut) return Astro.redirect(safeNext);
 const input =
   'mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-blue-100';
 ---
@@ -32,6 +34,13 @@ const input =
   const form = document.getElementById('login') as HTMLFormElement;
   const error = form.querySelector<HTMLElement>('[data-error]')!;
   const button = form.querySelector('button')!;
+
+  // Đăng xuất chỉ chạy khi đã rời trang cũ (người dùng không bấm "Ở lại" vì còn bài chưa lưu)
+  if (new URLSearchParams(location.search).has('logout')) {
+    api('auth/logout', { method: 'POST' })
+      .catch(() => {})
+      .finally(() => history.replaceState(null, '', '/admin/login/'));
+  }
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     error.classList.add('hidden');

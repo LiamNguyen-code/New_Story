@@ -7,7 +7,7 @@ category: Reading
 publishDate: 2026-11-19
 ---
 
-Serial fiction has quietly become one of the most-read formats on the web. Over the past twelve months, readers on Midnight Tales opened more chapters, stayed longer on each page and — most surprisingly — finished more stories from start to end than in any previous year.
+Serial fiction has quietly become one of the most-read formats on the web. Over the past twelve months, readers on News and Tales opened more chapters, stayed longer on each page and — most surprisingly — finished more stories from start to end than in any previous year.
 
 The biggest driver is simple: chapters are short enough to read on a phone in a few minutes, and every chapter ends with a reason to keep going.
 

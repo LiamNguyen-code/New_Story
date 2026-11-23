@@ -1,10 +1,9 @@
-import { getCollection, type CollectionEntry } from 'astro:content';
 import { and, asc, desc, eq, lte, sql } from 'drizzle-orm';
-import { Marked } from 'marked';
 import settings from '../data/settings.json';
 import { db, schema } from './server/db';
+import { vnDay } from './server/views';
 
-const { stories: S, chapters: C, authors: A } = schema;
+const { stories: S, chapters: C, authors: A, users: U } = schema;
 
 export interface StoryData {
   title: string;
@@ -28,6 +27,8 @@ export interface StoryData {
 export interface Story {
   id: string;
   dbId: number;
+  /** Tài khoản đăng truyện (tác giả) */
+  ownerId: number | null;
   data: StoryData;
   body: string;
 }
@@ -40,7 +41,9 @@ export interface Chapter {
   body?: string;
 }
 
-const today = () => new Date().toISOString().slice(0, 10);
+// Ngày đăng lưu theo giờ Việt Nam (vnDay) nên so sánh cũng theo giờ Việt Nam,
+// nếu dùng ngày UTC thì bài đăng từ 0h–7h sáng bị ẩn tới 7h
+const today = () => vnDay();
 // Dev hiện cả nháp; truyện hẹn giờ chỉ hiện khi tới ngày
 const storyVisible = () => (import.meta.env.DEV ? lte(S.publishDate, today()) : and(eq(S.draft, false), lte(S.publishDate, today())));
 const chapterVisible = () => (import.meta.env.DEV ? undefined : eq(C.draft, false));
@@ -48,6 +51,7 @@ const chapterVisible = () => (import.meta.env.DEV ? undefined : eq(C.draft, fals
 const toStory = (r: typeof S.$inferSelect): Story => ({
   id: r.slug,
   dbId: r.id,
+  ownerId: r.ownerId,
   body: r.summary,
   data: {
     title: r.title,
@@ -72,8 +76,6 @@ export async function getStories(): Promise<Story[]> {
   return db.select().from(S).where(storyVisible()).orderBy(desc(S.publishDate), desc(S.id)).all().map(toStory);
 }
 
-/** Featured lên đầu, còn lại theo ngày mới nhất (trang chủ + /page/N/). */
-export const sortFeatured = (stories: Story[]) => [...stories.filter((s) => s.data.featured), ...stories.filter((s) => !s.data.featured)];
 
 export async function getStory(slug: string): Promise<Story | null> {
   const row = db.select().from(S).where(and(eq(S.slug, slug), storyVisible())).get();
@@ -114,16 +116,19 @@ export async function searchStories(q: string): Promise<Story[]> {
     .map(toStory);
 }
 
-export async function getAuthor(id: string | undefined) {
-  return id ? (db.select().from(A).where(eq(A.id, id)).get() ?? null) : null;
+/**
+ * Tên tác giả = tên tài khoản đã đăng bài (truyện / tin).
+ * Bài của tài khoản đã xoá: dùng tác giả cũ trong bảng authors (nếu có).
+ */
+export function getAuthorName(ownerId: number | null, legacyAuthorId?: string): string | null {
+  if (ownerId !== null) {
+    const u = db.select({ name: U.name }).from(U).where(eq(U.id, ownerId)).get();
+    if (u?.name) return u.name;
+  }
+  return legacyAuthorId ? (db.select({ name: A.name }).from(A).where(eq(A.id, legacyAuthorId)).get()?.name ?? null) : null;
 }
 
-// ------------------------------------------------------------ Markdown
-
-// HTML thô trong nội dung bị escape: người sửa truyện không chèn được script vào site
-const md = new Marked({ gfm: true, breaks: false });
-md.use({ renderer: { html: ({ text }) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') } });
-export const renderMarkdown = (text: string) => md.parse(text, { async: false });
+export { renderMarkdown } from './markdown';
 
 // ------------------------------------------------------------ Ảnh bìa (uploads/covers)
 
@@ -132,16 +137,55 @@ export const coverSrcset = (name: string, widths: number[]) => widths.map((w) =>
 /** Ảnh OG 1200x630 dạng JPG (Facebook/Zalo hiển thị ổn định nhất với JPG). */
 export const ogImageUrl = (name: string) => `/uploads/covers/${name}-og.jpg`;
 
-// ------------------------------------------------------------ Tin tức (vẫn là file markdown)
+// ------------------------------------------------------------ Tin tức
 
-const isVisible = (draft: boolean, date?: Date) => (import.meta.env.DEV || !draft) && (!date || date.getTime() <= Date.now());
+/** Tin: id = slug, body = nội dung markdown */
+export interface News {
+  id: string;
+  body: string;
+  /** Tài khoản đăng tin (tác giả) */
+  ownerId: number | null;
+  data: {
+    title: string;
+    description?: string;
+    cover: string;
+    coverAlt?: string;
+    category?: string;
+    publishDate: Date;
+    updatedDate?: Date;
+    draft: boolean;
+    seoTitle?: string;
+  };
+}
 
-export type News = CollectionEntry<'news'>;
+const N = schema.news;
+const newsVisible = () => (import.meta.env.DEV ? lte(N.publishDate, today()) : and(eq(N.draft, false), lte(N.publishDate, today())));
 
-/** Tin tức đã xuất bản, mới nhất trước. */
+const toNews = (r: typeof N.$inferSelect): News => ({
+  id: r.slug,
+  body: r.body,
+  ownerId: r.ownerId,
+  data: {
+    title: r.title,
+    description: r.description || undefined,
+    cover: r.cover,
+    coverAlt: r.coverAlt || undefined,
+    category: r.category || undefined,
+    publishDate: new Date(r.publishDate),
+    updatedDate: r.updatedDate ? new Date(r.updatedDate) : undefined,
+    draft: r.draft,
+    seoTitle: r.seoTitle || undefined,
+  },
+});
+
+/** Tin tức đã xuất bản (bỏ nháp và tin hẹn giờ chưa tới ngày), mới nhất trước. */
 export async function getNews(): Promise<News[]> {
-  const all = await getCollection('news', ({ data }) => isVisible(data.draft, data.publishDate));
-  return all.sort((a, b) => b.data.publishDate.getTime() - a.data.publishDate.getTime());
+  return db.select().from(N).where(newsVisible()).orderBy(desc(N.publishDate), desc(N.id)).all().map(toNews);
+}
+
+export async function getNewsItem(slug: string): Promise<News | null> {
+  const row = db.select().from(N).where(and(eq(N.slug, slug), newsVisible())).get();
+  return row ? toNews(row) : null;
 }
 
 export const newsUrl = (slug: string) => `/news/${slug}/`;

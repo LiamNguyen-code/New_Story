@@ -3,10 +3,10 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import StoryGrid from '../../components/StoryGrid.astro';
 import { SITE } from '../../site.config';
-import { getStories, sortFeatured } from '../../lib/content';
+import { getStories } from '../../lib/content';
 import { paginate } from '../../lib/paginate';
 
-const page = paginate(sortFeatured(await getStories()), Astro.params.page, SITE.storiesPerPage, (n) => (n === 1 ? '/' : `/page/${n}/`));
+const page = paginate(await getStories(), Astro.params.page, SITE.storiesPerPage, (n) => (n === 1 ? '/' : `/page/${n}/`));
 if (!page || page.currentPage === 1) return Astro.rewrite('/404/');
 ---
 

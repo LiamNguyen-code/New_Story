@@ -11,8 +11,8 @@ export const PUT: APIRoute = ({ params, request, locals }) =>
     return ok({});
   });
 
-export const DELETE: APIRoute = ({ params }) =>
+export const DELETE: APIRoute = ({ params, locals }) =>
   handle(async () => {
-    await deleteStory(params.slug!);
+    await deleteStory(params.slug!, locals.user!);
     return ok({});
   });

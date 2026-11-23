@@ -16,9 +16,9 @@ const small = 'rounded-md border border-zinc-300 bg-white px-2.5 py-1 text-xs fo
   <div class="sticky top-14 z-30 -mx-4 mb-6 border-b border-zinc-200 bg-zinc-50/95 px-4 py-3 backdrop-blur">
     <div class="flex flex-wrap items-center gap-3">
       <h1 class="mr-auto text-xl font-bold text-slate-900 sm:text-2xl">Tài khoản</h1>
-      <button type="button" data-logout class="inline-flex items-center rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50">
+      <a href="/admin/login/?logout" class="inline-flex items-center rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50">
         Đăng xuất
-      </button>
+      </a>
     </div>
   </div>
 
@@ -45,6 +45,9 @@ const small = 'rounded-md border border-zinc-300 bg-white px-2.5 py-1 text-xs fo
                     </select>
                     {u.id !== me.id && (
                       <>
+                        <button type="button" data-rename data-name={u.name} class={small}>
+                          Đổi tên
+                        </button>
                         <button type="button" data-reset class={small}>
                           Đặt lại mật khẩu
                         </button>
@@ -56,7 +59,9 @@ const small = 'rounded-md border border-zinc-300 bg-white px-2.5 py-1 text-xs fo
                   </li>
                 ))}
               </ul>
-              <p class="text-xs text-zinc-500">Biên tập: thêm/sửa/xoá truyện. Admin: thêm cả quản lý tài khoản.</p>
+              <p class="text-xs text-zinc-500">
+                Biên tập: chỉ thấy và sửa / xoá truyện, tin do mình đăng. Admin: sửa mọi bài, xem Báo cáo, quản lý tài khoản. Tên hiển thị là tên tác giả trên site.
+              </p>
             </section>
 
             <form id="add-user" class={card}>
@@ -96,7 +101,17 @@ const small = 'rounded-md border border-zinc-300 bg-white px-2.5 py-1 text-xs fo
       }
     </div>
 
-    <aside class="min-w-0">
+    <aside class="min-w-0 space-y-5">
+      <form id="profile" class={card}>
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-500">Tên hiển thị của bạn</h2>
+        <label class="block text-sm font-medium">
+          Tên tác giả trên site
+          <input name="name" required maxlength="100" value={me.name} placeholder="VD: Claire Holloway" class={input} />
+          <span class="mt-1 block text-xs font-normal text-zinc-500">Hiện ở dòng "By …" của mọi truyện, tin bạn đăng.</span>
+        </label>
+        <button class={primary + ' w-full'}>Lưu tên</button>
+      </form>
+
       <form id="change-password" class={card}>
         <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-500">Đổi mật khẩu của bạn</h2>
         <p class="text-xs text-zinc-500">{me.email}</p>
@@ -115,7 +130,7 @@ const small = 'rounded-md border border-zinc-300 bg-white px-2.5 py-1 text-xs fo
 </AdminLayout>
 
 <script>
-  import { api, logout } from '../../lib/admin/content';
+  import { api } from '../../lib/admin/content';
   import { toast } from '../../lib/admin/dom';
 
   const run = async (fn: () => Promise<unknown>, okMsg: string, reload = false) => {
@@ -131,7 +146,11 @@ const small = 'rounded-md border border-zinc-300 bg-white px-2.5 py-1 text-xs fo
   };
   const json = (method: string, body: unknown) => ({ method, body: JSON.stringify(body) });
 
-  document.querySelector('[data-logout]')?.addEventListener('click', logout);
+  document.getElementById('profile')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget as HTMLFormElement);
+    run(() => api('admin/profile', json('POST', { name: fd.get('name') })), 'Đã lưu tên hiển thị.', true);
+  });
 
   document.getElementById('change-password')?.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -152,6 +171,10 @@ const small = 'rounded-md border border-zinc-300 bg-white px-2.5 py-1 text-xs fo
     li.querySelector<HTMLSelectElement>('[data-role]')?.addEventListener('change', (e) =>
       run(() => api(`admin/users/${id}`, json('PUT', { role: (e.target as HTMLSelectElement).value })), 'Đã đổi quyền.', true),
     );
+    li.querySelector<HTMLElement>('[data-rename]')?.addEventListener('click', (e) => {
+      const name = prompt(`Tên hiển thị (tên tác giả trên site) của ${email}:`, (e.currentTarget as HTMLElement).dataset.name ?? '');
+      if (name?.trim()) run(() => api(`admin/users/${id}`, json('PUT', { name })), 'Đã đổi tên.', true);
+    });
     li.querySelector('[data-reset]')?.addEventListener('click', () => {
       const password = prompt(`Mật khẩu mới cho ${email} (≥ 8 ký tự):`);
       if (password) run(() => api(`admin/users/${id}`, json('PUT', { password })), 'Đã đặt lại mật khẩu. Người đó đã bị đăng xuất khỏi mọi thiết bị.');

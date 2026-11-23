@@ -21,9 +21,8 @@ export const SITE = {
 };
 
 export const NAV = [
-  { href: '/', label: 'Blog' },
+  { href: '/', label: 'Stories' },
   { href: '/news/', label: 'News' },
-  { href: '/genres/', label: 'Genres' },
   { href: '/contact/', label: 'Contact Us' },
   { href: '/terms/', label: 'Terms and Conditions' },
 ];

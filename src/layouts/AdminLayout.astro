@@ -12,10 +12,11 @@ const path = Astro.url.pathname;
 const user = Astro.locals.user;
 const nav = [
   { href: '/admin/', label: 'Truyện' },
-  { href: '/admin/import/', label: '+ Thêm truyện' },
-  { href: '/admin/reports/', label: 'Báo cáo' },
+  { href: '/admin/news/', label: 'Tin tức' },
+  // Báo cáo lượt xem chỉ dành cho admin
+  user?.role === 'admin' && { href: '/admin/reports/', label: 'Báo cáo' },
   { href: '/admin/users/', label: 'Tài khoản' },
-];
+].filter((n): n is { href: string; label: string } => !!n);
 ---
 
 <!doctype html>
@@ -49,8 +50,15 @@ const nav = [
           )
         }
         {bare && <span class="flex-1"></span>}
-        {user && <span class="hidden max-w-[220px] truncate text-xs text-zinc-500 lg:block" title={user.email}>● {user.email}</span>}
+        {user && !bare && <span class="hidden max-w-[220px] truncate text-xs text-zinc-500 lg:block" title={user.email}>● {user.email}</span>}
         <a href="/" target="_blank" class="whitespace-nowrap text-sm text-accent hover:underline">Xem site ↗</a>
+        {
+          user && !bare && (
+            <a href="/admin/login/?logout" class="whitespace-nowrap rounded-md px-2 py-1.5 text-sm text-zinc-600 hover:bg-red-50 hover:text-red-700">
+              Đăng xuất
+            </a>
+          )
+        }
       </div>
     </header>
     <main class="mx-auto max-w-6xl px-4 pb-24 pt-4">

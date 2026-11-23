@@ -6,6 +6,7 @@ import { parseFilter, report } from '../../../lib/server/views';
 const cell = (v: string | number) => (typeof v === 'number' ? String(v) : `"${v.replace(/"/g, '""')}"`);
 
 export const GET: APIRoute = ({ url, locals }) => {
+  if (locals.user?.role !== 'admin') return new Response(JSON.stringify({ error: 'Chỉ quản trị viên (admin) mới xem được báo cáo.' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
   const filter = parseFilter(url.searchParams, locals.user!);
   const { byPage, total } = report(filter);
   const rows = [

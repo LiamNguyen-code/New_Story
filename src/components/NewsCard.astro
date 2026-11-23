@@ -1,6 +1,6 @@
 ---
 // Thẻ tin ngang: ảnh trái, tiêu đề + ngày đăng + đoạn trích bên phải.
-import { Image } from 'astro:assets';
+import Cover from './Cover.astro';
 import { excerpt, formatLongDate, newsUrl, type News } from '../lib/content';
 
 interface Props {
@@ -15,10 +15,10 @@ const summary = data.description ?? excerpt(item.body ?? '', 160);
 
 <article class="news-card group relative flex overflow-hidden border border-zinc-200 bg-white transition hover:shadow-md">
   <a href={href} class="block w-[38%] max-w-[220px] shrink-0 overflow-hidden bg-zinc-100 sm:w-[220px]" tabindex="-1" aria-hidden="true">
-    <Image
-      src={data.cover}
+    <Cover
+      name={data.cover}
       alt=""
-      widths={[220, 440]}
+      widths={[240, 480]}
       sizes="220px"
       loading={eager ? 'eager' : 'lazy'}
       fetchpriority={eager ? 'high' : 'auto'}

@@ -1,12 +1,12 @@
 ---
 title: "New This Week: A Waitress, A Stray Dog And A Daughter Nobody Believed"
-description: "Four new complete stories just landed on Midnight Tales. Here is a quick guide to what to read first."
+description: "Four new complete stories just landed on News and Tales. Here is a quick guide to what to read first."
 cover: ../../assets/news/new-stories-week.webp
 category: Announcements
 publishDate: 2026-11-12
 ---
 
-This week brings four brand-new stories to Midnight Tales, each one complete and free to read from the first chapter to the last.
+This week brings four brand-new stories to News and Tales, each one complete and free to read from the first chapter to the last.
 
 ## The Mafia Boss Ignored His Deaf Mother's Hands
 

@@ -1,0 +1,15 @@
+---
+// Quản lý tin tức: danh sách → thêm / sửa / xoá. Toàn bộ chạy trên trình duyệt (src/lib/admin/news.ts).
+import AdminLayout from '../../layouts/AdminLayout.astro';
+
+const me = Astro.locals.user!;
+---
+
+<AdminLayout title="Tin tức">
+  <div id="app" data-author={me.name || me.email} data-admin={me.role === 'admin' ? '1' : '0'}><p class="text-sm text-zinc-500">Loading…</p></div>
+</AdminLayout>
+
+<script>
+  import { startNewsApp } from '../../lib/admin/news';
+  startNewsApp(document.getElementById('app')!);
+</script>

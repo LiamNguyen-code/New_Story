@@ -18,6 +18,6 @@ Short chapters fit naturally into small pockets of time. A reader can finish one
 
 Family drama, second chances and stories about quiet people who finally speak up consistently draw the most readers. These stories are easy to start, hard to put down and satisfying to finish.
 
-> "I tell myself I'll read one chapter. Then it's midnight and I've read eight." — a Midnight Tales reader
+> "I tell myself I'll read one chapter. Then it's midnight and I've read eight." — a News and Tales reader
 
 Whatever the genre, the lesson is the same: respect the reader's time, and give them a reason to turn the page.

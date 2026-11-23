@@ -1,4 +1,5 @@
 ---
+import { safeJson } from '../lib/markdown';
 import { SITE } from '../site.config';
 
 export interface Crumb {
@@ -47,4 +48,4 @@ const ld = {
     </nav>
   )
 }
-<script is:inline type="application/ld+json" set:html={JSON.stringify(ld)} />
+<script is:inline type="application/ld+json" set:html={safeJson(ld)} />

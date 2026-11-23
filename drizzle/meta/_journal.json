@@ -15,6 +15,20 @@
       "when": 1795336119423,
       "tag": "0001_page_views",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1795337133137,
+      "tag": "0002_news",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1795397862007,
+      "tag": "0003_news_owner",
+      "breakpoints": true
     }
   ]
 }

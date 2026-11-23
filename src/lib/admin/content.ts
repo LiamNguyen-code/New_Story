@@ -1,5 +1,6 @@
 // Gọi API /api/admin từ trang admin (chạy trên trình duyệt). Dữ liệu nằm trong SQLite trên server.
 import type { ChapterDTO, StoryDTO } from '../server/admin';
+import type { NewsDTO } from '../server/news';
 
 export type StoryRec = StoryDTO;
 /** id không có = chương mới chưa lưu */
@@ -45,11 +46,9 @@ function form(data: unknown, cover?: Blob | null) {
 export const loadData = () =>
   api<{
     user: AdminUser;
+    /** Biên tập viên: chỉ truyện của mình */
     stories: StoryRec[];
-    authors: { id: string; name: string }[];
     genres: Settings['genres'];
-    /** Chỉ có khi đăng nhập bằng admin */
-    users: { id: number; name: string; email: string }[];
   }>('admin/data');
 
 export async function loadChapters(slug: string): Promise<ChapterDTO[]> {
@@ -60,14 +59,15 @@ export interface NewStory {
   slug: string;
   overwrite?: boolean;
   body: string;
-  data: Omit<StoryRec['data'], 'cover' | 'updatedDate' | 'seoTitle' | 'seoDescription'>;
+  /** Tác giả (người đăng) và ngày đăng do server tự đặt */
+  data: Pick<StoryRec['data'], 'title' | 'description' | 'coverAlt' | 'genres' | 'tags' | 'status'>;
   chapters: { number: number; title: string; body: string }[];
 }
 
 export const createStory = (story: NewStory, cover: Blob) => api('admin/stories', { method: 'POST', body: form(story, cover) });
 
 export const saveStory = (story: StoryRec, cover?: Blob | null) =>
-  api(`admin/stories/${encodeURIComponent(story.slug)}`, { method: 'PUT', body: form({ data: story.data, body: story.body, ownerId: story.ownerId }, cover) });
+  api(`admin/stories/${encodeURIComponent(story.slug)}`, { method: 'PUT', body: form({ data: story.data, body: story.body }, cover) });
 
 export const deleteStory = (story: StoryRec) => api(`admin/stories/${encodeURIComponent(story.slug)}`, { method: 'DELETE' });
 
@@ -79,6 +79,26 @@ export function saveChapter(slug: string, ch: ChapterRec) {
 export const addChapters = (slug: string, chapters: Omit<ChapterRec, 'id'>[]) => api(`admin/stories/${encodeURIComponent(slug)}/chapters`, send('POST', { chapters }));
 
 export const deleteChapter = (ch: ChapterDTO) => api(`admin/chapters/${ch.id}`, { method: 'DELETE' });
+
+// ------------------------------------------------------------ Tin tức
+
+export type NewsRec = NewsDTO;
+
+export const loadNews = () => api<{ news: NewsRec[]; slugs: string[] }>('admin/news');
+
+export const createNews = (item: NewsRec, cover: Blob) => api('admin/news', { method: 'POST', body: form(item, cover) });
+
+export const saveNews = (item: NewsRec, cover?: Blob | null) =>
+  api(`admin/news/${encodeURIComponent(item.slug)}`, { method: 'PUT', body: form({ data: item.data, body: item.body }, cover) });
+
+export const deleteNews = (item: NewsRec) => api(`admin/news/${encodeURIComponent(item.slug)}`, { method: 'DELETE' });
+
+/** Upload ảnh chèn vào nội dung, trả về URL */
+export async function uploadImage(file: Blob) {
+  const fd = new FormData();
+  fd.set('file', file, 'image');
+  return (await api<{ url: string }>('admin/uploads', { method: 'POST', body: fd })).url;
+}
 
 export const logout = async () => {
   await api('auth/logout', { method: 'POST' }).catch(() => {});

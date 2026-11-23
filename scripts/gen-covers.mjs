@@ -28,7 +28,7 @@ for (const c of covers) {
   await sharp(Buffer.from(svg(c))).webp({ quality: 82 }).toFile(`src/assets/covers/${c.file}.webp`);
   console.log('✓', c.file);
 }
-await sharp(Buffer.from(svg({ title: 'Midnight Tales', from: '#1c1917', to: '#be185d' })))
+await sharp(Buffer.from(svg({ title: 'News and Tales', from: '#1c1917', to: '#be185d' })))
   .jpeg({ quality: 82 })
   .toFile('public/og-default.jpg');
 console.log('✓ public/og-default.jpg');

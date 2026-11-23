@@ -1,4 +1,4 @@
-# Midnight Tales: website đọc truyện theo chương
+# News and Tales: website tin tức và truyện đọc theo chương
 
 Astro 5 (render trên server, adapter Node) + Tailwind 4 + **SQLite** (Drizzle ORM). Chuẩn SEO, có trang admin
 đăng nhập bằng email + mật khẩu cho nhiều người, tối ưu cho AdSense. Chạy trên 1 VPS (DigitalOcean...).
@@ -7,7 +7,7 @@ Astro 5 (render trên server, adapter Node) + Tailwind 4 + **SQLite** (Drizzle O
 
 ```bash
 npm install
-npm run db:import                                  # lần đầu: nhập truyện mẫu từ src/content vào database
+npm run db:import                                  # lần đầu: nhập truyện mẫu từ src/seed vào database
 npm run user:create -- you@example.com matkhau123 "Tên bạn"   # tạo tài khoản admin
 npm run dev                                        # http://localhost:4321 · admin: http://localhost:4321/admin/
 ```
@@ -22,9 +22,9 @@ npm start          # http://localhost:4321 (đổi cổng: PORT=3000 npm start)
 
 | Nội dung | Lưu ở |
 |---|---|
-| Truyện, chương, tác giả, tài khoản, phiên đăng nhập | `data/app.db` (SQLite) |
-| Ảnh bìa (tự tạo 240/480/800/1200px WebP + ảnh OG JPG) | `data/uploads/covers/` |
-| Tin tức (`/news/`) | `src/content/news/*.md` (build sẵn thành HTML) |
+| Truyện, chương, tác giả, tin tức, tài khoản, lượt xem | `data/app.db` (SQLite) |
+| Ảnh bìa truyện + tin (tự tạo 240/480/800/1200px WebP + ảnh OG JPG) | `data/uploads/covers/` |
+| Ảnh chèn trong nội dung tin | `data/uploads/news/` |
 | Tên site, GA, AdSense, thể loại | `src/data/settings.json` |
 
 Thư mục `data/` **không** nằm trong git. Đổi vị trí bằng biến môi trường `DATA_DIR` (xem `.env.example`).
@@ -33,23 +33,27 @@ Backup = copy `data/app.db` + `data/uploads/` (dùng `sqlite3 data/app.db ".back
 Đổi cấu trúc bảng: sửa `src/lib/server/schema.ts` → `npm run db:generate` → commit thư mục `drizzle/`.
 Server tự áp migration mới khi khởi động.
 
-File markdown cũ trong `src/content/stories|chapters|authors` và ảnh `src/assets/covers` chỉ dùng cho `npm run db:import`;
+File markdown mẫu trong `src/seed/` và ảnh `src/assets/` chỉ dùng cho `npm run db:import`;
 sau khi đã nhập vào database có thể xoá.
 
 ## Quản trị truyện (/admin/)
 
-Đăng nhập ở `/admin/login/`. Lưu xong là site cập nhật **ngay**, không cần build. Truyện hẹn giờ (ngày đăng trong tương lai)
-tự hiện khi tới ngày.
+Đăng nhập ở `/admin/login/` (nút **Đăng xuất** trên menu). Lưu xong là site cập nhật **ngay**, không cần build.
+Truyện / tin đăng ngay khi tạo (ngày đăng = hôm nay) và lên đầu danh sách. **Tác giả = tài khoản đăng bài**
+(tên trong mục Tài khoản), không chọn tay. Truyện chưa có chương nào tạm ẩn khỏi site, thêm chương là tự hiện.
 
 | Màn hình | Chức năng |
 |---|---|
-| `/admin/` **Truyện** | Danh sách truyện: tìm kiếm, tab lọc (Đã đăng / Hẹn giờ / Nháp / Nổi bật / Đang ra), sửa, xem, xoá |
+| `/admin/` **Truyện** | Danh sách truyện: tìm kiếm, tab lọc (Đã đăng / Chưa có chương / Đang ra), sửa, xem, xoá. Nút **+ Thêm truyện** ở đầu danh sách |
 | Bấm vào 1 truyện | Thông tin truyện + **danh sách chương**: thêm 1 chương, **dán nhiều chương**, sửa, xoá |
-| Sửa thông tin | Tên, mô tả, tóm tắt, ảnh bìa (tự cắt 1200×630), thể loại, tag, tác giả, ngày đăng, SEO |
-| `/admin/import/` **Thêm truyện** | Dán cả truyện để tự tách chương, hoặc tạo truyện trống rồi thêm chương sau |
+| Sửa thông tin | Tên, mô tả, tóm tắt, ảnh bìa (tự cắt 1200×630), thể loại, tag, tình trạng, SEO |
+| `/admin/import/` **Thêm truyện** | Dán cả truyện để tự tách chương, hoặc tạo truyện trống rồi thêm chương sau. Slug tự tạo chuẩn SEO, sửa được |
+| `/admin/news/` **Tin tức** | Thêm / sửa / xoá tin bằng trình soạn thảo trực quan (như Word): ảnh bìa, ảnh trong bài, tiêu đề mục, danh sách, bảng |
+| `/admin/reports/` **Báo cáo** (chỉ admin) | Lượt xem theo ngày / người phụ trách / truyện / từng trang, chia doanh thu, tải CSV |
 | `/admin/users/` **Tài khoản** | Đổi mật khẩu của mình. Admin: thêm/xoá người, đặt lại mật khẩu, đổi quyền |
 
-Quyền: **Biên tập** (sửa truyện) và **Admin** (thêm cả quản lý tài khoản).
+Quyền: **Biên tập** chỉ thấy và sửa / xoá truyện, tin **do mình đăng**; không xem Báo cáo.
+**Admin** thấy và sửa tất cả, xem Báo cáo, quản lý tài khoản.
 Quên mật khẩu admin: chạy lại `npm run user:create -- <email> <mật khẩu mới>` trên server.
 
 Phím tắt: **Ctrl + S** để lưu. Rời trang khi chưa lưu sẽ được hỏi lại.
@@ -86,14 +90,15 @@ Khi được duyệt AdSense, sửa `public/ads.txt` (bỏ dấu `#`, điền pu
 ```
 src/
   pages/            # route: index, page/[page], story/[slug], story/[slug]/chapter-[n], genre, tag, search, admin...
-  pages/api/        # API: auth/login|logout, admin/* (truyện, chương, tài khoản)
+  pages/api/        # API: auth/login|logout, track, admin/* (truyện, chương, tin tức, ảnh, tài khoản, báo cáo)
   middleware.ts     # bắt đăng nhập cho /admin + phục vụ /uploads
   components/       # SEO, AdSlot, Cover, StoryCard, ChapterToc, ShareButtons, Breadcrumbs...
   layouts/          # BaseLayout, PageLayout, AdminLayout
   lib/content.ts    # đọc truyện/chương cho trang công khai
-  lib/server/       # db (SQLite), schema, auth, admin (ghi dữ liệu), images (ảnh bìa)
+  lib/server/       # db (SQLite), schema, auth, admin + news (ghi dữ liệu), images, views (báo cáo)
+  lib/markdown.ts   # Markdown → HTML an toàn (dùng chung site + xem trước trong admin)
   lib/admin/        # app admin chạy trên trình duyệt (gọi /api/admin)
-  content/news/     # tin tức (markdown)
+  content/          # markdown cũ, chỉ dùng cho npm run db:import
   data/settings.json
 drizzle/            # migration SQL (tự áp khi server khởi động)
 scripts/            # import-content (markdown → DB), create-user
