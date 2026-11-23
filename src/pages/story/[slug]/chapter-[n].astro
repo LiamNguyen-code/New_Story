@@ -2,7 +2,6 @@
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import Cover from '../../../components/Cover.astro';
 import Breadcrumbs from '../../../components/Breadcrumbs.astro';
-import CrumbBar from '../../../components/CrumbBar.astro';
 import ShareButtons from '../../../components/ShareButtons.astro';
 import StoryCard from '../../../components/StoryCard.astro';
 import AdSlot from '../../../components/AdSlot.astro';
@@ -109,20 +108,28 @@ const chapterLd = {
     ]}
   />
 
-  <div class="mx-auto max-w-[1180px] px-4 sm:px-6 xl:grid xl:grid-cols-[minmax(0,760px)_300px] xl:justify-center xl:gap-10">
+  <div class="reading-col px-4">
     <div class="min-w-0">
-      <CrumbBar title={story.data.title} href={storyUrl(story.id)} label={`Chapter ${n} / ${total}`} />
-
-      <h1 class="mt-6 text-[28px] font-bold leading-[1.15] tracking-tight text-slate-900 sm:text-[42px] xl:text-[54px]">{heading}</h1>
+      <header class="mb-8 mt-5">
+        <div class="mb-2 flex min-w-0 items-center gap-1.5 text-[13px] leading-snug">
+          <a href={storyUrl(story.id)} class="min-w-0 truncate font-bold uppercase tracking-wider text-blue-600 hover:opacity-80">{story.data.title}</a>
+          <span class="shrink-0 text-slate-300">/</span>
+          <span class="shrink-0 whitespace-nowrap font-semibold tabular-nums text-slate-500">Chapter {n} / {total}</span>
+        </div>
+        <div class="mb-5 h-1 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-label="Reading progress" aria-valuenow={index + 1} aria-valuemin="1" aria-valuemax={total}>
+          <div class="h-full rounded-full bg-blue-600" style={`width: ${Math.round(((index + 1) / total) * 100)}%`}></div>
+        </div>
+        <h1 class="text-[32px] font-bold leading-[1.1] text-slate-900 sm:text-[44px] md:text-[56px]">{heading}</h1>
+      </header>
 
       <Cover
         name={story.data.cover}
         alt={story.data.coverAlt ?? story.data.title}
         widths={[480, 800, 1200]}
-        sizes="(min-width: 1280px) 760px, 100vw"
+        sizes="(min-width: 800px) 760px, 100vw"
         loading="eager"
         fetchpriority="high"
-        class="mt-8 aspect-[1200/630] w-full rounded-2xl object-cover"
+        class="mx-auto block aspect-[1200/630] w-full rounded-lg object-cover"
       />
 
       <AdSlot pos="top" />
@@ -133,11 +140,11 @@ const chapterLd = {
         {part2 && <Fragment set:html={part2} />}
         {
           hasLike && mayLike.length > 0 && (
-            <aside class="my-10 border-t border-zinc-100 pt-6" aria-labelledby="maylike-heading">
-              <h2 id="maylike-heading" class="mb-3 text-base font-bold text-slate-900">
+            <aside class="my-10" aria-labelledby="maylike-heading">
+              <h2 id="maylike-heading" class="mb-4 text-xl font-bold text-slate-900">
                 May you like
               </h2>
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid gap-4 sm:grid-cols-2">
                 {mayLike.map((s) => (
                   <StoryCard story={s} variant="mini" />
                 ))}
@@ -151,29 +158,43 @@ const chapterLd = {
 
       <div class="mt-8"><ShareButtons title={`${story.data.title} – ${heading}`} /></div>
 
-      <nav aria-label="Chapter navigation" class="mt-8 grid grid-cols-2 gap-3 border-t border-zinc-200 pt-6">
+      <nav aria-label="Chapter navigation" class="mt-8 grid gap-3 border-t border-slate-200 pt-6 sm:grid-cols-2">
         <a
           href={prevUrl ?? storyUrl(story.id)}
           rel={prevUrl ? 'prev' : undefined}
-          class="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-center hover:shadow-sm"
+          class="flex min-h-[88px] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 transition hover:border-slate-300 hover:shadow-sm"
         >
-          <span class="block text-[9px] uppercase tracking-[0.12em] text-zinc-400">{prevUrl ? '← Previous chapter' : 'View intro'}</span>
-          <span class="mt-1 line-clamp-2 text-[11.5px] font-medium leading-snug text-slate-900">
-            {prev ? `Chapter ${prev.data.number} - ${prev.data.title}` : story.data.title}
+          <span class="text-xl text-slate-400" aria-hidden="true">‹</span>
+          <span class="min-w-0">
+            <span class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">{prevUrl ? 'Previous' : 'View intro'}</span>
+            <span class="mt-1 line-clamp-2 text-[15px] font-medium leading-snug text-slate-900">
+              {prev ? `Chapter ${prev.data.number} - ${prev.data.title}` : story.data.title}
+            </span>
           </span>
         </a>
         {
           nextUrl ? (
-            <a href={nextUrl} rel="next" data-next class="rounded-xl border border-accent bg-accent px-4 py-3 text-center text-white hover:opacity-90">
-              <span class="block text-[9px] uppercase tracking-[0.12em] text-blue-100">Next chapter →</span>
-              <span class="mt-1 line-clamp-2 text-[11.5px] font-medium leading-snug">
-                Chapter {next!.data.number} - {next!.data.title}
+            <a
+              href={nextUrl}
+              rel="next"
+              data-next
+              class="flex min-h-[88px] items-center justify-end gap-3 rounded-2xl border border-blue-600 bg-blue-600 px-5 py-4 text-right text-white transition hover:bg-blue-700"
+            >
+              <span class="min-w-0">
+                <span class="block text-[11px] font-semibold uppercase tracking-wider text-blue-100">Next chapter</span>
+                <span class="mt-1 line-clamp-2 text-[15px] font-medium leading-snug">
+                  Chapter {next!.data.number} - {next!.data.title}
+                </span>
               </span>
+              <span class="text-xl text-blue-100" aria-hidden="true">›</span>
             </a>
           ) : (
-            <a href={storyUrl(story.id)} class="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-center hover:shadow-sm">
-              <span class="block text-[9px] uppercase tracking-[0.12em] text-zinc-400">The end</span>
-              <span class="mt-1 line-clamp-2 text-[11.5px] font-medium leading-snug text-slate-900">Back to story intro</span>
+            <a
+              href={storyUrl(story.id)}
+              class="flex min-h-[88px] flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-4 text-center transition hover:border-slate-300 hover:shadow-sm"
+            >
+              <span class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">The end · View intro</span>
+              <span class="mt-1 line-clamp-2 text-[15px] font-medium leading-snug text-slate-900">{story.data.title}</span>
             </a>
           )
         }
@@ -183,11 +204,9 @@ const chapterLd = {
 
       <RelatedChapters slug={story.id} cover={story.data.cover} chapters={related} />
     </div>
-
-    <div>
-      <ChapterToc slug={story.id} storyTitle={story.data.title} chapters={chapters} current={n} />
-    </div>
   </div>
+
+  <ChapterToc slug={story.id} storyTitle={story.data.title} chapters={chapters} current={n} />
 
   <OtherPosts stories={otherPosts} />
   <ViewTracker slug={story.id} chapter={n} />

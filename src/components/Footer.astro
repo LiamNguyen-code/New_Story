@@ -3,8 +3,8 @@ import { FOOTER_NAV, SITE } from '../site.config';
 ---
 
 <footer class="mt-20 border-t border-zinc-200 bg-white">
-  <div class="mx-auto flex max-w-[1120px] flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
-    <a href="/" class="font-logo text-xl font-bold text-zinc-900">{SITE.name.toLowerCase()}</a>
+  <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row">
+    <a href="/" class="font-logo text-xl font-semibold text-zinc-950">{SITE.name.toLowerCase()}</a>
     <nav aria-label="Footer" class="flex flex-wrap justify-center gap-x-5 gap-y-2 text-[13px] text-zinc-500">
       {FOOTER_NAV.map((l) => <a class="hover:text-zinc-900" href={l.href}>{l.label}</a>)}
     </nav>

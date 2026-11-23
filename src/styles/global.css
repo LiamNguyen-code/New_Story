@@ -2,14 +2,15 @@
 @plugin '@tailwindcss/typography';
 
 @theme {
-  --font-sans: 'Segoe UI', -apple-system, BlinkMacSystemFont, Inter, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Font hệ thống (Windows: Segoe UI, Mac/iPhone: San Francisco, Android: Roboto), không tải font ngoài */
+  --font-sans: -apple-system, system-ui, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
   --font-logo: Georgia, 'Times New Roman', Times, serif;
   --font-news: Georgia, 'Times New Roman', Times, serif;
   --color-accent: #2563eb;
 }
 
 :root {
-  --reader-size: 21px;
+  --reader-size: 24px;
   --tenant-bg: #fafafa;
   --tenant-text: #09090b;
   --tenant-muted: #3f3f46;
@@ -27,20 +28,34 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Nội dung chương */
+/* Nội dung chương / tóm tắt truyện: chữ lớn 24px, dòng 44px (cả điện thoại lẫn máy tính) */
 .reader {
-  font-size: 18px;
-  line-height: 1.95;
-  color: #1e293b;
-}
-@media (min-width: 768px) {
-  .reader {
-    font-size: var(--reader-size);
-    line-height: 2.05;
-  }
+  font-size: var(--reader-size);
+  line-height: 44px;
+  color: #0f172a;
 }
 .reader p {
-  margin: 0 0 1.1em;
+  margin: 24px 0;
+}
+.reader > :first-child {
+  margin-top: 0;
+}
+
+/*
+ * Cột đọc truyện rộng 760px ở giữa màn hình; mục lục nổi cố định bên phải (từ 1280px).
+ * Màn hình chưa đủ rộng để vừa cả hai (dưới ~1456px) thì đẩy cột đọc sang trái cho khỏi bị mục lục che.
+ */
+.reading-col {
+  /* 760px chữ + 2×16px lề (px-4) */
+  max-width: 792px;
+  margin-inline: auto;
+}
+@media (min-width: 1280px) {
+  .reading-col {
+    /* mép phải chữ cách mục lục (rộng 300px, cách lề phải 24px) ít nhất 24px */
+    margin-left: max(0px, min((100vw - 792px) / 2, 100vw - 1124px));
+    margin-right: auto;
+  }
 }
 
 /* Nội dung bài tin (News) */

@@ -2,7 +2,6 @@
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import Cover from '../../../components/Cover.astro';
 import Breadcrumbs from '../../../components/Breadcrumbs.astro';
-import CrumbBar from '../../../components/CrumbBar.astro';
 import ShareButtons from '../../../components/ShareButtons.astro';
 import AdSlot from '../../../components/AdSlot.astro';
 import ChapterToc from '../../../components/ChapterToc.astro';
@@ -20,12 +19,14 @@ import {
   getChapters,
   getStories,
   getStory,
-  minutesFromWords,
   ogImageUrl,
   renderMarkdown,
   storyUrl,
   tagUrl,
 } from '../../../lib/content';
+
+const BOOK_ICON =
+  'M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25';
 
 const story = await getStory(Astro.params.slug ?? '');
 if (!story) return Astro.rewrite('/404/');
@@ -33,7 +34,6 @@ if (!story) return Astro.rewrite('/404/');
 const { data } = story;
 const [chapters, all] = await Promise.all([getChapters(story), getStories()]);
 const author = getAuthorName(story.ownerId, data.author);
-const totalMinutes = chapters.reduce((sum, c) => sum + minutesFromWords(c.wordCount), 0);
 const otherPosts = all.filter((s) => s.id !== story.id).slice(0, 8);
 
 const url = new URL(storyUrl(story.id), SITE.url).href;
@@ -81,73 +81,78 @@ const bookLd = {
 >
   <Breadcrumbs jsonOnly items={[{ name: genreName(data.genres[0]), href: genreUrl(data.genres[0]) }, { name: data.title }]} />
 
-  <div class="mx-auto max-w-[1180px] px-4 sm:px-6 xl:grid xl:grid-cols-[minmax(0,760px)_300px] xl:justify-center xl:gap-10">
-    <div class="min-w-0">
-      <CrumbBar title={genreName(data.genres[0])} href={genreUrl(data.genres[0])} label={`${chapters.length} chapters`} />
-
-      <article data-pagefind-body>
-        <h1 class="mt-6 text-[28px] font-bold leading-[1.15] tracking-tight text-slate-900 sm:text-[42px] xl:text-[50px]">{data.title}</h1>
-        <p class="mt-4 flex flex-wrap gap-x-3 text-[13px] text-zinc-500" data-pagefind-ignore>
-          {author && <span>By <strong class="font-semibold text-zinc-700">{author}</strong></span>}
+  <div class="reading-col px-4">
+    <article data-pagefind-body>
+      <header class="mb-10 mt-5 text-center">
+        <div class="mb-3 text-[14px] font-bold uppercase tracking-wider text-blue-600">
           <time datetime={data.publishDate.toISOString()}>{formatDate(data.publishDate)}</time>
-          <span>· ~{totalMinutes} min read</span>
-          <span>· {data.status === 'completed' ? 'Completed' : 'Ongoing'}</span>
-        </p>
-
-        <Cover
-          name={data.cover}
-          alt={data.coverAlt ?? data.title}
-          widths={[480, 800, 1200]}
-          sizes="(min-width: 1280px) 760px, 100vw"
-          loading="eager"
-          fetchpriority="high"
-          class="mt-8 aspect-[1200/630] w-full rounded-2xl object-cover"
-        />
-
-        <div class="reader mt-8" set:html={renderMarkdown(story.body)} />
-      </article>
-
-      <div class="mt-2 flex flex-wrap gap-2">
+          <span class="text-slate-400"> · {chapters.length} chapters</span>
+          {author && <span class="text-slate-400"> · By {author}</span>}
+        </div>
+        <h1 class="mb-5 text-[32px] font-bold leading-[1.1] text-slate-900 sm:text-[44px] md:mb-6 md:text-[56px]">{data.title}</h1>
         {
-          data.genres.map((g) => (
-            <a href={genreUrl(g)} class="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-accent hover:bg-blue-100">
-              {genreName(g)}
-            </a>
-          ))
+          chapters.length > 0 && (
+            <div class="flex flex-wrap items-center justify-center gap-3">
+              <a
+                href={chapterUrl(story.id, chapters[0].data.number)}
+                class="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"
+              >
+                <svg class="shrink-0" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d={BOOK_ICON} />
+                </svg>
+                Read from start
+              </a>
+              <a
+                href="#"
+                data-resume
+                data-slug={story.id}
+                class="hidden items-center justify-center rounded-full border border-blue-600 bg-white px-6 py-3 text-sm font-bold text-blue-600 transition hover:bg-blue-50"
+              >
+                Continue
+              </a>
+            </div>
+          )
         }
-        {
-          data.tags.map((t) => (
-            <a href={tagUrl(t)} class="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs text-zinc-600 hover:text-accent">
-              #{t}
-            </a>
-          ))
-        }
-      </div>
+      </header>
 
+      <Cover
+        name={data.cover}
+        alt={data.coverAlt ?? data.title}
+        widths={[480, 800, 1200]}
+        sizes="(min-width: 800px) 760px, 100vw"
+        loading="eager"
+        fetchpriority="high"
+        class="mx-auto block aspect-[1200/630] w-full rounded-lg object-cover"
+      />
+
+      <div class="reader mt-8" set:html={renderMarkdown(story.body)} />
+    </article>
+
+    <div class="mt-2 flex flex-wrap gap-2">
       {
-        chapters.length > 0 && (
-          <div class="mt-8 flex flex-wrap gap-3">
-            <a href={chapterUrl(story.id, chapters[0].data.number)} class="rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-white hover:opacity-90">
-              Start reading · Chapter 1
-            </a>
-            <a href="#" data-resume data-slug={story.id} class="hidden rounded-xl border border-accent bg-white px-6 py-3 text-sm font-semibold text-accent">
-              Continue
-            </a>
-          </div>
-        )
+        data.genres.map((g) => (
+          <a href={genreUrl(g)} class="rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-100">
+            {genreName(g)}
+          </a>
+        ))
       }
-
-      <AdSlot pos="top" />
-
-      <div class="mt-8"><ShareButtons title={data.title} /></div>
-
-      <RelatedChapters slug={story.id} cover={data.cover} chapters={chapters.slice(0, 6)} />
+      {
+        data.tags.map((t) => (
+          <a href={tagUrl(t)} class="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-600 hover:text-blue-600">
+            #{t}
+          </a>
+        ))
+      }
     </div>
 
-    <div>
-      <ChapterToc slug={story.id} storyTitle={data.title} chapters={chapters} current={0} />
-    </div>
+    <AdSlot pos="top" />
+
+    <div class="mt-8"><ShareButtons title={data.title} /></div>
+
+    <RelatedChapters slug={story.id} cover={data.cover} chapters={chapters.slice(0, 6)} />
   </div>
+
+  <ChapterToc slug={story.id} storyTitle={data.title} chapters={chapters} current={0} />
 
   <OtherPosts stories={otherPosts} />
   <ViewTracker slug={story.id} chapter={0} />
@@ -162,7 +167,7 @@ const bookLd = {
       if (entry && entry.chapter > 1) {
         btn.href = entry.url;
         btn.textContent = `Continue · Chapter ${entry.chapter}`;
-        btn.classList.remove('hidden');
+        btn.classList.replace('hidden', 'inline-flex');
       }
     } catch {}
   }
