@@ -3,7 +3,7 @@
 //   #/new           thêm tin
 //   #/edit/<slug>   sửa tin
 import { coverThumb, createNews, dateOnly, deleteNews, loadNews, saveNews, uploadImage, wordCount, type NewsRec } from './content';
-import { btn, coverPicker, h, icon, input, pageBar, toast, type Child } from './dom';
+import { btn, coverPicker, h, icon, input, markFresh, pageBar, takeFresh, toast, urlBox, type Child } from './dom';
 import { createEditor, type RichEditor } from './editor';
 import { seoSlug } from '../importer';
 
@@ -273,7 +273,10 @@ function editView(item: NewsRec | null) {
           dirty = false;
           ({ news: items, slugs: allSlugs } = await loadNews());
           toast(isNew ? 'Đã đăng tin.' : 'Đã lưu tin.');
-          if (isNew) go(editHash(rec));
+          if (isNew) {
+            markFresh('news:' + rec.slug);
+            go(editHash(rec));
+          }
           else editView(items.find((n) => n.slug === rec.slug) ?? null);
         });
       },
@@ -285,7 +288,7 @@ function editView(item: NewsRec | null) {
         field('Tiêu đề *', title),
         isNew
           ? field('Slug (URL) *', slug, 'Tự tạo từ tiêu đề (không dấu, bỏ từ nối, ≤ 60 ký tự, không trùng). Có thể sửa; không đổi được sau khi đăng.')
-          : field('Slug (URL)', slug, h('a', { href: `/news/${item!.slug}/`, target: '_blank', class: 'text-accent hover:underline' }, `/news/${item!.slug}/ ↗`)),
+          : urlBox(`/news/${item!.slug}/`, { label: 'Link bài viết' }),
         field('Mô tả ngắn', description, h('span', {}, 'Hiện trên thẻ tin và Google.', counter(description, 200))),
       ),
       card(
@@ -326,6 +329,7 @@ function editView(item: NewsRec | null) {
       title: isNew ? 'Viết tin mới' : 'Sửa tin',
       actions: [h('a', { href: '#/', class: btn.secondary }, 'Huỷ'), save],
     }),
+    item && takeFresh('news:' + item.slug) && h('div', { class: 'mb-5' }, urlBox(`/news/${item.slug}/`, { fresh: '🎉 Đã đăng tin! Copy link để chia sẻ:' })),
     form,
   );
   if (isNew) title.focus();

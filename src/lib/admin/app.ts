@@ -21,7 +21,7 @@ import {
   type Settings,
   type StoryRec,
 } from './content';
-import { btn, coverPicker, h, icon, input, pageBar, toast, type Child } from './dom';
+import { btn, coverPicker, h, icon, input, pageBar, takeFresh, toast, urlBox, type Child } from './dom';
 import { splitChapters } from '../importer';
 
 let root: HTMLElement;
@@ -314,6 +314,7 @@ async function storyView(s: StoryRec) {
         h('a', { href: `/story/${s.slug}/`, target: '_blank', class: btn.secondary }, icon('external'), 'Xem'),
       ],
     }),
+    takeFresh('story:' + s.slug) && h('div', { class: 'mb-5' }, urlBox(`/story/${s.slug}/`, { fresh: '🎉 Đã tạo truyện! Copy link để chia sẻ:' })),
     h(
       'section',
       { class: 'flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-4 sm:flex-row sm:p-5' },
@@ -338,6 +339,7 @@ async function storyView(s: StoryRec) {
           h('dt', { class: 'text-zinc-500' }, 'Độ dài'),
           h('dd', { class: 'text-zinc-700' }, `${chapters.length} chương · ${totalWords.toLocaleString()} chữ`),
         ),
+        h('div', { class: 'pt-2' }, urlBox(`/story/${s.slug}/`, { label: 'Link truyện' })),
       ),
     ),
 
@@ -500,6 +502,7 @@ function storyEdit(s: StoryRec) {
       { class: 'min-w-0 space-y-5' },
       card(
         field('Tên truyện *', title),
+        urlBox(`/story/${s.slug}/`, { label: 'Link truyện' }),
         field('Mô tả ngắn *', description, h('span', {}, 'Hiện trên thẻ truyện và Google.', counter(description, 200))),
         field('Tóm tắt', summary, 'Hiện ở đầu trang giới thiệu truyện. Mỗi đoạn cách nhau 1 dòng trống.'),
       ),
@@ -619,7 +622,7 @@ async function chapterEdit(s: StoryRec, id: string | undefined) {
         ),
       !isNew &&
         card(
-          h('a', { href: `/story/${s.slug}/chapter-${ch.data.number}/`, target: '_blank', class: btn.secondary + ' w-full' }, icon('external'), 'Xem trên site'),
+          urlBox(`/story/${s.slug}/chapter-${ch.data.number}/`, { label: 'Link chương' }),
           h(
             'button',
             {

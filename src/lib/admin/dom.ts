@@ -53,6 +53,7 @@ const ICONS: Record<string, string> = {
   edit: 'M4 20h4L19 9l-4-4L4 16v4zM13 7l4 4',
   image: 'M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5M15 9.5a1 1 0 1 0 0-.01',
   chevron: 'M9 6l6 6-6 6',
+  copy: 'M9 9h11v11H9zM5 15H4V4h11v1',
 };
 export function icon(name: keyof typeof ICONS | string, cls = 'h-4 w-4') {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -136,4 +137,79 @@ export function toast(msg: string, ok = true) {
   );
   document.body.append(t);
   setTimeout(() => t.remove(), ok ? 2500 : 6000);
+}
+
+/** Chép chữ vào clipboard (có dự phòng cho trình duyệt/HTTP không hỗ trợ navigator.clipboard). */
+export async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = h('textarea', { value: text, class: 'fixed -left-[9999px]', readOnly: true });
+    document.body.append(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    if (!ok) throw new Error('Không chép được, hãy bôi đen link và chép tay.');
+  }
+}
+
+/**
+ * Ô hiện URL công khai + nút Copy + nút mở tab mới.
+ * `path` là đường dẫn trên site (VD /story/abc/); URL đầy đủ lấy theo domain đang chạy admin.
+ * `fresh`: vừa tạo xong, hiện nổi bật kèm lời nhắc.
+ */
+export function urlBox(path: string, opts: { label?: string; fresh?: string } = {}) {
+  const url = new URL(path, location.origin).href;
+  const field = h('input', {
+    class: input.replace('mt-1 ', '') + ' min-w-0 flex-1 bg-zinc-50 font-mono text-xs text-zinc-700',
+    value: url,
+    readOnly: true,
+    'aria-label': opts.label ?? 'Link công khai',
+    onfocus: (e: Event) => (e.target as HTMLInputElement).select(),
+  });
+  const copyLabel = h('span', {}, 'Copy');
+  const copy = h(
+    'button',
+    {
+      type: 'button',
+      class: (opts.fresh ? btn.primary : btn.secondary) + ' shrink-0',
+      onclick: async () => {
+        try {
+          await copyText(url);
+          copyLabel.textContent = 'Đã copy ✓';
+          toast('Đã copy link.');
+          setTimeout(() => (copyLabel.textContent = 'Copy'), 2000);
+        } catch (e) {
+          field.select();
+          toast((e as Error).message, false);
+        }
+      },
+    },
+    icon('copy'),
+    copyLabel,
+  );
+  const open = h('a', { href: path, target: '_blank', class: btn.icon + ' shrink-0', title: 'Mở trên site', 'aria-label': 'Mở trên site' }, icon('external'));
+  return h(
+    'div',
+    { class: opts.fresh ? 'rounded-xl border border-emerald-200 bg-emerald-50 p-4' : '' },
+    opts.fresh && h('p', { class: 'mb-2 text-sm font-semibold text-emerald-800' }, opts.fresh),
+    opts.label && h('p', { class: 'mb-1 text-sm font-medium text-zinc-800' }, opts.label),
+    h('div', { class: 'flex items-center gap-2' }, field, copy, open),
+  );
+}
+
+/** Đánh dấu "vừa tạo xong" qua lần chuyển trang (kể cả tải lại trang khác như import → admin). */
+export function markFresh(key: string) {
+  try {
+    sessionStorage.setItem('fresh:' + key, '1');
+  } catch {}
+}
+export function takeFresh(key: string) {
+  try {
+    const v = sessionStorage.getItem('fresh:' + key);
+    sessionStorage.removeItem('fresh:' + key);
+    return !!v;
+  } catch {
+    return false;
+  }
 }

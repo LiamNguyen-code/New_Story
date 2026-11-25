@@ -152,7 +152,7 @@ The black sedan was still there...</pre>
 
 <script>
   import { createStory, wordCount } from '../../lib/admin/content';
-  import { cropCover } from '../../lib/admin/dom';
+  import { cropCover, markFresh } from '../../lib/admin/dom';
   import { seoSlug, splitChapters, type ParsedChapter } from '../../lib/importer';
 
   main();
@@ -282,6 +282,7 @@ The black sedan was still there...</pre>
         // Ghi đè (slug đã có): server xoá chương cũ và ảnh bìa cũ
         await createStory(story, coverBlob);
         dirty = false;
+        markFresh('story:' + slug);
         location.href = `/admin/#/story/${encodeURIComponent(slug)}`;
       } catch (err) {
         fail((err as Error).message);
